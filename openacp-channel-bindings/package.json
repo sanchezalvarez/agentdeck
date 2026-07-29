@@ -1,0 +1,19 @@
+{
+  "name": "openacp-channel-bindings",
+  "version": "1.0.0",
+  "private": true,
+  "type": "module",
+  "description": "Fixed Discord channel -> OpenACP project bindings (agent + workspace) with per-thread sessions",
+  "scripts": {
+    "build": "tsc",
+    "test": "vitest run",
+    "test:watch": "vitest",
+    "install-hook": "node scripts/install-hook.mjs",
+    "verify": "npm run build && npm run test"
+  },
+  "devDependencies": {
+    "@types/node": "^22.10.2",
+    "typescript": "^5.9.3",
+    "vitest": "^3.2.4"
+  }
+}

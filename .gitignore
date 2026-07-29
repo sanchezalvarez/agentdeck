@@ -1,0 +1,41 @@
+# Secrets / local config
+.env
+
+# OpenACP settings bundle for moving to another PC — CONTAINS THE DISCORD BOT
+# TOKEN. Physically copied with the folder, but must NEVER be committed.
+openacp-config/
+
+# Python
+__pycache__/
+*.pyc
+.venv/
+.pytest_cache/
+*.egg-info/
+build/
+dist/
+
+# Captured screenshots
+backend/screenshots/
+
+# Dated dist snapshots kept while patching the adapter by hand
+openacp-channel-bindings/backup/
+
+# Output of scripts/make-distributable.ps1
+agent-hub.zip
+
+# SQLite database + backups
+*.db
+*.db-journal
+*.db-wal
+*.db-shm
+
+# Node / Next.js
+node_modules/
+.next/
+out/
+*.tsbuildinfo
+
+# Editors / OS
+.vscode/
+.idea/
+Thumbs.db

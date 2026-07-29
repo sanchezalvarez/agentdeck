@@ -1,0 +1,551 @@
+/* ============================================================================
+ * riso.css — Risograph UI design system (drop-in starter)
+ * ----------------------------------------------------------------------------
+ * A self-contained set of CSS custom properties (design tokens) and component
+ * classes that recreate a risograph-print aesthetic in a web UI:
+ *   - offset "misregistration" shadows  - grainy noise textures
+ *   - tactile press-in buttons          - registration-mark corner frames
+ *   - a fixed accent palette (orange / teal / violet / gold)
+ *
+ * USAGE
+ *   1. Drop this file into your project and import it once at the app root
+ *      (e.g. `@import "./riso.css";` or `import "./riso.css"`).
+ *   2. Toggle dark mode by adding the class `dark` to <html> or <body>.
+ *   3. Apply the component classes (btn-tactile, card-riso, ...) in markup.
+ *
+ * The tokens are framework-agnostic plain CSS variables. If you use Tailwind
+ * v4, map them into your theme with `@theme inline { --color-x: var(--x); }`.
+ * Two display fonts are referenced (Syne, IBM Plex Mono) — install them or
+ * swap the font-family fallbacks; everything else degrades gracefully.
+ *
+ * See DESIGN_RULES.md (in this skill) for the hard numeric rules — control
+ * heights, dropdown widths, spacing scale, anti-patterns.
+ * ========================================================================== */
+
+/* ── Tokens — light (Warm Paper) ─────────────────────────────────────────── */
+:root {
+  --background:          #F0E8DC;
+  --background-2:        #E6DDD0;
+  --background-3:        #D8CFC0;
+  --foreground:          #14100A;
+  --card:                #E6DDD0;
+  --card-foreground:     #14100A;
+  --popover:             #E6DDD0;
+  --popover-foreground:  #14100A;
+  --primary:             #E04E0E;
+  --primary-foreground:  #FFFFFF;
+  --secondary:           #D0C8B8;
+  --secondary-foreground:#2A2018;
+  --muted:               #E6DDD0;
+  --muted-foreground:    #7A6E5E;
+  --accent:              #E04E0E;
+  --accent-foreground:   #FFFFFF;
+  --destructive:         #DC2626;
+  --destructive-foreground: #F0E8DC;
+  --border:              rgba(20,16,10,0.10);
+  --border-strong:       rgba(20,16,10,0.20);
+  --input:               #D8CFC0;
+  --ring:                #E04E0E;
+  --radius:              0.5rem;
+
+  /* Accent palette — the four risograph "inks" */
+  --accent-orange:       #E04E0E;  /* primary action, selection, active tint */
+  --accent-teal:         #0B7268;  /* confirmed / toggle-on, date picker     */
+  --accent-violet:       #5C3A9C;  /* information / neutral markers           */
+  --accent-gold:         #C8902A;  /* warning / pending                       */
+
+  /* Neutral button surface */
+  --btn-neutral-bg:      #D0C8B8;
+  --btn-neutral-fg:      #2A2018;
+  --btn-neutral-border:  rgba(20,16,10,0.22);
+
+  /* Riso offset (misregistration) shadow colours */
+  --riso-teal:           rgba(11,114,104,0.22);
+  --riso-orange:         rgba(224,78,14,0.22);
+  --riso-violet:         rgba(92,58,156,0.18);
+
+  /* Noise textures — inline SVG fractal-noise data URIs */
+  --noise-subtle: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='200' height='200'%3E%3Cfilter id='n'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.65' numOctaves='3' stitchTiles='stitch'/%3E%3CfeColorMatrix type='saturate' values='0'/%3E%3C/filter%3E%3Crect width='200' height='200' filter='url(%23n)' opacity='0.04'/%3E%3C/svg%3E");
+  --noise-medium: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='200' height='200'%3E%3Cfilter id='n'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.65' numOctaves='3' stitchTiles='stitch'/%3E%3CfeColorMatrix type='saturate' values='0'/%3E%3C/filter%3E%3Crect width='200' height='200' filter='url(%23n)' opacity='0.07'/%3E%3C/svg%3E");
+  --noise-btn: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='100' height='100'%3E%3Cfilter id='n'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.75' numOctaves='3' stitchTiles='stitch'/%3E%3CfeColorMatrix type='saturate' values='0'/%3E%3C/filter%3E%3Crect width='100' height='100' filter='url(%23n)' opacity='0.05'/%3E%3C/svg%3E");
+
+  /* Print registration strip (orange / teal / violet thirds) */
+  --riso-strip: linear-gradient(to right, #E04E0E 0%, #E04E0E 33%, #0B7268 33%, #0B7268 66%, #5C3A9C 66%, #5C3A9C 100%);
+}
+
+/* ── Tokens — dark ───────────────────────────────────────────────────────── */
+.dark {
+  --background:          #2C2418;
+  --background-2:        #362D1F;
+  --background-3:        #403626;
+  --foreground:          #F0E8DC;
+  --card:                #362D1F;
+  --card-foreground:     #F0E8DC;
+  --popover:             #362D1F;
+  --popover-foreground:  #F0E8DC;
+  --secondary:           #403626;
+  --secondary-foreground:#C8BEA8;
+  --muted:               #362D1F;
+  --muted-foreground:    #A09080;
+  --border:              rgba(240,232,220,0.12);
+  --border-strong:       rgba(240,232,220,0.22);
+  --input:               #403626;
+  --destructive-foreground: #F0E8DC;
+
+  --primary:             #FF5A1A;
+  --primary-foreground:  #FFFFFF;
+  --accent:              #FF5A1A;
+  --accent-foreground:   #FFFFFF;
+  --destructive:         #EF4444;
+  --ring:                #FF5A1A;
+
+  --accent-orange:       #FF5A1A;
+  --accent-teal:         #14B8A6;
+  --accent-violet:       #8B62D4;
+  --accent-gold:         #E8A830;
+
+  --btn-neutral-bg:      #2A2620;
+  --btn-neutral-fg:      #C8BEA8;
+  --btn-neutral-border:  rgba(240,232,220,0.15);
+
+  --riso-teal:           rgba(20,184,166,0.18);
+  --riso-orange:         rgba(255,90,26,0.18);
+  --riso-violet:         rgba(139,98,212,0.15);
+
+  /* Darker grain so textures don't brighten against the dark surface */
+  --noise-subtle: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='200' height='200'%3E%3Cfilter id='n'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.65' numOctaves='3' stitchTiles='stitch'/%3E%3CfeColorMatrix type='saturate' values='0'/%3E%3C/filter%3E%3Crect width='200' height='200' filter='url(%23n)' opacity='0.06'/%3E%3C/svg%3E");
+  --noise-medium: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='200' height='200'%3E%3Cfilter id='n'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.65' numOctaves='3' stitchTiles='stitch'/%3E%3CfeColorMatrix type='saturate' values='0'/%3E%3C/filter%3E%3Crect width='200' height='200' filter='url(%23n)' opacity='0.09'/%3E%3C/svg%3E");
+  --noise-btn: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='100' height='100'%3E%3Cfilter id='n'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.75' numOctaves='3' stitchTiles='stitch'/%3E%3CfeColorMatrix type='saturate' values='0'/%3E%3C/filter%3E%3Crect width='100' height='100' filter='url(%23n)' opacity='0.07'/%3E%3C/svg%3E");
+}
+
+/* ── Typography helpers ──────────────────────────────────────────────────── */
+.font-display {
+  font-family: 'Syne Variable', system-ui, sans-serif;
+  font-weight: 700;
+}
+.font-mono-ui {
+  font-family: 'IBM Plex Mono', ui-monospace, monospace;
+}
+/* Misregistration title effect — teal + orange ghost shadows */
+.riso-title {
+  text-shadow:
+    1.5px 1.5px 0 rgba(11,114,104,0.40),
+    -1px -0.5px 0 rgba(224,78,14,0.25);
+}
+
+/* ── Surface noise ───────────────────────────────────────────────────────── */
+.surface-noise {
+  background-image: var(--noise-subtle);
+  background-repeat: repeat;
+}
+.surface-noise-flat {
+  background-image: var(--noise-medium);
+  background-repeat: repeat;
+}
+
+/* Grain + halftone dot overlay (apply to a positioned container) */
+.riso-noise { position: relative; }
+.riso-noise::before {
+  content: '';
+  position: absolute;
+  inset: 0;
+  pointer-events: none;
+  z-index: 0;
+  background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='200' height='200'%3E%3Cfilter id='n'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.72' numOctaves='4' stitchTiles='stitch'/%3E%3C/filter%3E%3Crect width='200' height='200' filter='url(%23n)'/%3E%3C/svg%3E");
+  background-repeat: repeat;
+  background-size: 200px 200px;
+  opacity: 0.055;
+  mix-blend-mode: multiply;
+}
+.riso-noise::after {
+  content: '';
+  position: absolute;
+  inset: 0;
+  pointer-events: none;
+  z-index: 0;
+  background-image: radial-gradient(circle, rgba(0,0,0,0.10) 1.5px, transparent 1.5px);
+  background-size: 20px 20px;
+}
+
+/* ── Tactile buttons ─────────────────────────────────────────────────────── */
+.btn-tactile {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  padding: 3px 8px;
+  font-size: 11px;
+  font-family: 'IBM Plex Mono', ui-monospace, monospace;
+  font-weight: 500;
+  border-radius: 4px;
+  border: 1.5px solid var(--btn-neutral-border);
+  background: var(--btn-neutral-bg);
+  background-image: var(--noise-btn);
+  background-repeat: repeat;
+  color: var(--btn-neutral-fg);
+  cursor: pointer;
+  transition: filter 0.1s ease, transform 0.1s ease, box-shadow 0.1s ease;
+  box-shadow: 0 1px 0 rgba(0,0,0,0.12), 0 1px 3px rgba(0,0,0,0.06);
+  user-select: none;
+}
+.btn-tactile:hover:not(:disabled) {
+  filter: brightness(0.96);
+  box-shadow: 0 2px 4px rgba(0,0,0,0.10);
+}
+.btn-tactile:active:not(:disabled) {
+  transform: translateY(1px);
+  box-shadow: 0 0px 0 rgba(0,0,0,0.10);
+}
+/* Visible focus ring for keyboard users only */
+.btn-tactile:focus-visible {
+  outline: 2px solid var(--accent-orange);
+  outline-offset: 2px;
+}
+.btn-tactile:disabled {
+  opacity: 0.45;
+  cursor: not-allowed;
+}
+
+.btn-tactile-orange {
+  background: var(--accent-orange);
+  background-image: var(--noise-btn);
+  border-color: rgba(0,0,0,0.15);
+  color: #fff;
+}
+.btn-tactile-teal {
+  background: var(--accent-teal);
+  background-image: var(--noise-btn);
+  border-color: rgba(0,0,0,0.15);
+  color: #fff;
+}
+.btn-tactile-violet {
+  background: var(--accent-violet);
+  background-image: var(--noise-btn);
+  border-color: rgba(0,0,0,0.15);
+  color: #fff;
+}
+.dark .btn-tactile-orange,
+.dark .btn-tactile-teal,
+.dark .btn-tactile-violet {
+  border-color: rgba(255,255,255,0.12);
+}
+.btn-tactile-outline {
+  background: transparent;
+  background-image: none;
+  border-color: var(--border-strong, rgba(20,16,10,0.20));
+  color: var(--foreground);
+  box-shadow: none;
+}
+.btn-tactile-outline:hover:not(:disabled) {
+  background: color-mix(in srgb, var(--foreground) 6%, transparent);
+  filter: none;
+}
+
+/* ── Cards ───────────────────────────────────────────────────────────────── */
+.card-riso {
+  background-color: var(--card);
+  background-image: var(--noise-subtle);
+  background-repeat: repeat;
+  position: relative;
+}
+.card-riso::after {
+  content: '';
+  position: absolute;
+  inset: 0;
+  border-radius: inherit;
+  box-shadow: 3px 3px 0 var(--riso-teal);
+  pointer-events: none;
+}
+.card-riso-orange::after { box-shadow: 3px 3px 0 var(--riso-orange); }
+.card-riso-violet::after { box-shadow: 3px 3px 0 var(--riso-violet); }
+
+/* Interactive card — lifts on hover, presses on active */
+.card-riso-press {
+  box-shadow: 2px 2px 0 var(--riso-teal);
+  transition: transform 0.1s ease, box-shadow 0.1s ease;
+}
+.card-riso-press:hover {
+  transform: translate(-1px, -1px);
+  box-shadow: 3px 3px 0 var(--riso-teal);
+}
+.card-riso-press:active {
+  transform: translate(1px, 1px);
+  box-shadow: 0 0 0 var(--riso-teal);
+}
+
+/* ── Section label — uppercase mono header with ◆ marker ─────────────────── */
+.riso-section-label {
+  font-family: 'IBM Plex Mono', ui-monospace, monospace;
+  font-size: 10px;
+  font-weight: 600;
+  letter-spacing: 0.12em;
+  text-transform: uppercase;
+  color: var(--muted-foreground);
+  display: flex;
+  align-items: center;
+  gap: 5px;
+}
+.riso-section-label::before {
+  content: '◆';
+  color: var(--accent-orange);
+  font-size: 7px;
+  flex-shrink: 0;
+}
+
+/* ── Ink stamp — circular/pill badge for counts, status ──────────────────── */
+.riso-stamp {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  font-family: 'IBM Plex Mono', ui-monospace, monospace;
+  font-size: 9px;
+  font-weight: 700;
+  letter-spacing: 0.06em;
+  text-transform: uppercase;
+  border: 1.5px solid currentColor;
+  border-radius: 9999px;
+  padding: 1px 7px;
+  opacity: 0.70;
+  line-height: 1.6;
+}
+
+/* ── Corner registration marks — L-brackets in teal/orange ───────────────── */
+.riso-frame { position: relative; }
+.riso-frame::before,
+.riso-frame::after {
+  content: '';
+  position: absolute;
+  width: 14px;
+  height: 14px;
+  pointer-events: none;
+  opacity: 0.35;
+}
+.riso-frame::before {
+  top: 8px;
+  right: 8px;
+  border-top: 1.5px solid var(--accent-teal);
+  border-right: 1.5px solid var(--accent-teal);
+}
+.riso-frame::after {
+  bottom: 8px;
+  left: 8px;
+  border-bottom: 1.5px solid var(--accent-orange);
+  border-left: 1.5px solid var(--accent-orange);
+}
+
+/* ── Tag pills ───────────────────────────────────────────────────────────── */
+.tag-riso {
+  font-family: 'IBM Plex Mono', ui-monospace, monospace;
+  font-size: 10px;
+  font-weight: 500;
+  padding: 1px 7px;
+  border-radius: 9999px;
+  border: 1px solid var(--border);
+  background: var(--background-2);
+  color: var(--muted-foreground);
+}
+.tag-riso-orange { background: color-mix(in srgb, var(--accent-orange) 12%, transparent); color: var(--accent-orange); border-color: color-mix(in srgb, var(--accent-orange) 25%, transparent); }
+.tag-riso-teal   { background: color-mix(in srgb, var(--accent-teal)   12%, transparent); color: var(--accent-teal);   border-color: color-mix(in srgb, var(--accent-teal)   25%, transparent); }
+.tag-riso-violet { background: color-mix(in srgb, var(--accent-violet) 12%, transparent); color: var(--accent-violet); border-color: color-mix(in srgb, var(--accent-violet) 25%, transparent); }
+.tag-riso-muted  { background: var(--background-3); color: var(--muted-foreground); }
+
+/* ── Checkbox ────────────────────────────────────────────────────────────── */
+.riso-checkbox {
+  -webkit-appearance: none;
+  appearance: none;
+  width: 14px;
+  height: 14px;
+  border: 1.5px solid var(--border-strong);
+  border-radius: 3px;
+  background: var(--background);
+  background-image: var(--noise-subtle);
+  background-repeat: repeat;
+  box-shadow: 1.5px 1.5px 0 var(--riso-orange);
+  cursor: pointer;
+  display: inline-block;
+  vertical-align: middle;
+  position: relative;
+  transition: transform 0.08s ease, box-shadow 0.08s ease, background 0.08s ease;
+  flex-shrink: 0;
+}
+.riso-checkbox:hover:not(:disabled) {
+  border-color: var(--accent-orange);
+  box-shadow: 2px 2px 0 var(--riso-orange);
+  transform: translate(-0.5px, -0.5px);
+}
+.riso-checkbox:active:not(:disabled) {
+  transform: translate(1px, 1px);
+  box-shadow: 0.5px 0.5px 0 var(--riso-orange);
+}
+.riso-checkbox:checked {
+  background: var(--accent-orange);
+  border-color: var(--accent-orange);
+}
+.riso-checkbox:checked::after {
+  content: "";
+  position: absolute;
+  left: 3px;
+  top: 0px;
+  width: 4px;
+  height: 8px;
+  border: solid #fff;
+  border-width: 0 2px 2px 0;
+  transform: rotate(45deg);
+}
+.riso-checkbox:focus-visible {
+  outline: none;
+  box-shadow: 2px 2px 0 var(--riso-orange), 0 0 0 2px color-mix(in srgb, var(--accent-orange) 25%, transparent);
+}
+.riso-checkbox:disabled {
+  opacity: 0.45;
+  cursor: not-allowed;
+}
+
+/* ── Date input ──────────────────────────────────────────────────────────── */
+.input-riso-date {
+  font-family: 'IBM Plex Mono', ui-monospace, monospace;
+  font-size: 12px;
+  font-weight: 500;
+  color: var(--foreground);
+  background: var(--background);
+  background-image: var(--noise-subtle);
+  background-repeat: repeat;
+  border: 1.5px solid var(--border-strong);
+  border-radius: 4px;
+  padding: 4px 8px;
+  width: 100%;
+  box-shadow: 2px 2px 0 var(--riso-teal);
+  outline: none;
+  cursor: pointer;
+  transition: box-shadow 0.1s ease, border-color 0.1s ease, transform 0.1s ease;
+  -webkit-appearance: none;
+  appearance: none;
+  color-scheme: light;
+}
+.dark .input-riso-date { color-scheme: dark; }
+.input-riso-date:hover:not(:disabled) {
+  border-color: var(--accent-teal);
+  box-shadow: 2px 2px 0 var(--riso-teal);
+}
+.input-riso-date:focus {
+  border-color: var(--accent-teal);
+  box-shadow: 3px 3px 0 var(--riso-teal), 0 0 0 2px color-mix(in srgb, var(--accent-teal) 18%, transparent);
+  transform: translate(-1px, -1px);
+}
+.input-riso-date:active:not(:disabled) {
+  transform: translate(1px, 1px);
+  box-shadow: 1px 1px 0 var(--riso-teal);
+}
+.input-riso-date:disabled {
+  opacity: 0.45;
+  cursor: not-allowed;
+}
+.input-riso-date-sm {
+  font-size: 11px;
+  padding: 2px 6px;
+  box-shadow: 2px 2px 0 var(--riso-teal);
+}
+.input-riso-date-sm:focus {
+  box-shadow: 2px 2px 0 var(--riso-teal), 0 0 0 2px color-mix(in srgb, var(--accent-teal) 18%, transparent);
+  transform: translate(-1px, -1px);
+}
+
+/* ── Interactive rows ────────────────────────────────────────────────────── */
+.row-tactile {
+  transition: background 0.08s ease;
+}
+.row-tactile:active {
+  background: color-mix(in srgb, var(--accent-orange) 6%, transparent) !important;
+}
+
+/* ── Animations ──────────────────────────────────────────────────────────── */
+/* All entrance animations share the riso easing curve and `both` fill so the
+ * start state applies before the animation begins. */
+
+/* Ink-in — blur fade + bounce. For page headers / sections (0.6s). */
+@keyframes riso-ink-in {
+  0%   { opacity: 0;   transform: translateY(10px); filter: blur(2px); }
+  50%  { opacity: 0.7; transform: translateY(-2px); filter: blur(0); }
+  100% { opacity: 1;   transform: translateY(0); }
+}
+.animate-ink-in { animation: riso-ink-in 0.6s cubic-bezier(0.22, 1, 0.36, 1) both; }
+
+/* Column-in — fade + slide up 12px. For columns / sidebars (0.25s).
+ * NOTE: the 100% keyframe uses `transform: none` (not translateY(0)) so it
+ * does not leave a stacking context that traps position:fixed descendants. */
+@keyframes riso-column-in {
+  0%   { opacity: 0; transform: translateY(12px); }
+  100% { opacity: 1; transform: none; }
+}
+.animate-column-in { animation: riso-column-in 0.25s cubic-bezier(0.22, 1, 0.36, 1) both; }
+
+/* Card-in — fade + slide left 6px. For cards, stagger via animation-delay. */
+@keyframes riso-card-in {
+  0%   { opacity: 0; transform: translateX(-6px); }
+  100% { opacity: 1; transform: none; }
+}
+.animate-card-in { animation: riso-card-in 0.2s cubic-bezier(0.22, 1, 0.36, 1) both; }
+
+/* Row-in — fade + slide up 6px. For table/list rows, stagger via delay. */
+@keyframes riso-row-in {
+  0%   { opacity: 0; transform: translateY(6px); }
+  100% { opacity: 1; transform: translateY(0); }
+}
+.animate-row-in { animation: riso-row-in 0.18s cubic-bezier(0.22, 1, 0.36, 1) both; }
+
+/* Msg-in — misregistration text-shadow fade. For chat messages (0.35s). */
+@keyframes riso-msg-in {
+  0%   { opacity: 0; transform: translateY(4px); text-shadow: 3px 0 0 rgba(224,78,14,0.40), -3px 0 0 rgba(11,114,104,0.40); }
+  40%  { text-shadow: 1px 0 0 rgba(224,78,14,0.15), -1px 0 0 rgba(11,114,104,0.10); }
+  100% { opacity: 1; transform: translateY(0); text-shadow: none; }
+}
+.animate-msg-in { animation: riso-msg-in 0.35s cubic-bezier(0.22, 1, 0.36, 1) both; }
+
+/* Pulse / blink — loading and live-status indicators. */
+@keyframes riso-pulse { 0%, 100% { opacity: 1; } 50% { opacity: .55; } }
+.animate-riso-pulse { animation: riso-pulse 1.2s ease-in-out infinite; }
+@keyframes riso-blink { 0%, 100% { opacity: 1; } 50% { opacity: .2; } }
+.animate-riso-blink { animation: riso-blink 1.6s ease-in-out infinite; }
+
+/* Blob drift — slow-floating decorative colour blobs for page backgrounds.
+ * Pair with large, low-opacity, blurred circles (one per accent ink) inside a
+ * `position: absolute; inset: 0; overflow: hidden` layer behind your content. */
+@keyframes riso-blob-drift {
+  0%   { transform: translate(0, 0)        scale(1);    }
+  33%  { transform: translate(18px, -24px) scale(1.06); }
+  66%  { transform: translate(-14px, 16px) scale(0.95); }
+  100% { transform: translate(0, 0)        scale(1);    }
+}
+@keyframes riso-blob-drift-b {
+  0%   { transform: translate(0, 0)        scale(1);    }
+  33%  { transform: translate(-20px, 14px) scale(1.05); }
+  66%  { transform: translate(12px, -18px) scale(0.96); }
+  100% { transform: translate(0, 0)        scale(1);    }
+}
+.animate-blob-drift   { animation: riso-blob-drift   12s ease-in-out infinite; }
+.animate-blob-drift-b { animation: riso-blob-drift-b 16s ease-in-out infinite; }
+.animate-blob-drift-c { animation: riso-blob-drift    9s ease-in-out infinite reverse; }
+.animate-blob-drift-d { animation: riso-blob-drift-b 20s ease-in-out infinite reverse; }
+
+/* Respect reduced-motion: disable all riso animations and transforms. */
+@media (prefers-reduced-motion: reduce) {
+  .animate-ink-in,
+  .animate-column-in,
+  .animate-card-in,
+  .animate-row-in,
+  .animate-msg-in,
+  .animate-riso-pulse,
+  .animate-riso-blink,
+  .animate-blob-drift,
+  .animate-blob-drift-b,
+  .animate-blob-drift-c,
+  .animate-blob-drift-d {
+    animation: none !important;
+  }
+  .input-riso-date,
+  .input-riso-date-sm,
+  .card-riso-press,
+  .riso-checkbox {
+    transition: none;
+    transform: none !important;
+  }
+}

@@ -1,0 +1,116 @@
+@import "tailwindcss";
+
+/* Fonts are installed locally, not pulled from a CDN — this dashboard has to
+   work with no internet connection. */
+@import "@fontsource-variable/syne";
+@import "@fontsource-variable/noto-sans";
+@import "@fontsource/ibm-plex-mono/400.css";
+@import "@fontsource/ibm-plex-mono/500.css";
+@import "@fontsource/ibm-plex-mono/700.css";
+
+/* The design system: tokens + component classes, the single source of truth for
+   colour. Components reference tokens — never raw hex, never palette classes.
+   Rules live in .claude/skills/risograph-ui/DESIGN_RULES.md. */
+@import "./riso.css";
+
+/* Tailwind v4 reads its palette from here, so bg-background / text-foreground /
+   border-border resolve to riso tokens and follow light and dark automatically. */
+@theme inline {
+  --color-background: var(--background);
+  --color-background-2: var(--background-2);
+  --color-background-3: var(--background-3);
+  --color-foreground: var(--foreground);
+  --color-muted: var(--muted);
+  --color-muted-foreground: var(--muted-foreground);
+  --color-border: var(--border);
+  --color-border-strong: var(--border-strong);
+  --color-card: var(--card);
+  --color-orange: var(--accent-orange);
+  --color-teal: var(--accent-teal);
+  --color-violet: var(--accent-violet);
+  --color-gold: var(--accent-gold);
+  --color-destructive: var(--destructive);
+}
+
+:root {
+  color-scheme: light;
+}
+
+.dark {
+  color-scheme: dark;
+}
+
+body {
+  background-color: var(--background);
+  background-image: var(--noise-subtle);
+  color: var(--foreground);
+  font-family: "Noto Sans Variable", system-ui, sans-serif;
+}
+
+/* ── Project additions ──────────────────────────────────────────────────────
+   These live here, not in riso.css, so the vendored file stays a clean copy we
+   can re-download. Every number below comes from DESIGN_RULES.md. */
+
+/* Control-height buckets. Every control in one horizontal row shares a bucket. */
+.ctl-sm { height: 22px; }
+.ctl-md { height: 26px; }
+.ctl-lg { height: 32px; font-size: 12px; padding-inline: 12px; }
+
+/* Destructive button — the rules specify it but riso.css ships no class. */
+.btn-tactile-destructive {
+  background: var(--destructive);
+  color: var(--destructive-foreground);
+  border-color: color-mix(in srgb, var(--destructive) 65%, black);
+}
+.btn-tactile-destructive:hover:not(:disabled) {
+  background: color-mix(in srgb, var(--destructive) 88%, black);
+}
+
+/* Ghost: a btn-tactile with its surface removed until hovered. */
+.btn-tactile-ghost {
+  background: transparent;
+  border-color: transparent;
+  box-shadow: none;
+}
+.btn-tactile-ghost:hover:not(:disabled) {
+  background: var(--background-3);
+  border-color: var(--border);
+}
+
+/* Text input — riso.css ships input-riso-date only, so this mirrors it. */
+.input-riso {
+  font-family: "IBM Plex Mono", ui-monospace, monospace;
+  font-size: 11px;
+  padding: 4px 8px;
+  border: 1.5px solid var(--btn-neutral-border);
+  border-radius: 4px;
+  background: var(--background);
+  color: var(--foreground);
+  transition: box-shadow 0.15s cubic-bezier(0.22, 1, 0.36, 1),
+              border-color 0.15s cubic-bezier(0.22, 1, 0.36, 1);
+}
+.input-riso::placeholder { color: var(--muted-foreground); }
+.input-riso:hover:not(:disabled) { border-color: var(--border-strong); }
+.input-riso:focus {
+  outline: none;
+  border-color: var(--accent-orange);
+  box-shadow: 2px 2px 0 var(--riso-orange),
+              0 0 0 2px color-mix(in srgb, var(--accent-orange) 18%, transparent);
+}
+.input-riso:disabled { opacity: 0.5; }
+.input-riso-invalid, .input-riso-invalid:focus {
+  border-color: var(--destructive);
+  box-shadow: 2px 2px 0 color-mix(in srgb, var(--destructive) 22%, transparent);
+}
+
+/* Tag variants riso.css does not ship, in its idiom. */
+.tag-riso-gold {
+  background: color-mix(in srgb, var(--accent-gold) 14%, transparent);
+  color: var(--accent-gold);
+  border-color: color-mix(in srgb, var(--accent-gold) 28%, transparent);
+}
+.tag-riso-destructive {
+  background: color-mix(in srgb, var(--destructive) 12%, transparent);
+  color: var(--destructive);
+  border-color: color-mix(in srgb, var(--destructive) 28%, transparent);
+}
