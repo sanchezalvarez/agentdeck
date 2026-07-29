@@ -20,8 +20,8 @@ try {
     $envFile = Join-Path $root ".env"
     if (Test-Path $envFile) {
         foreach ($line in Get-Content $envFile) {
-            if ($line -match '^\s*AGENT_HUB_HOST\s*=\s*(.+)$') { $bindHost = $Matches[1].Trim() }
-            if ($line -match '^\s*AGENT_HUB_PORT\s*=\s*(.+)$') { $bindPort = $Matches[1].Trim() }
+            if ($line -match '^\s*AGENT_DECK_HOST\s*=\s*(.+)$') { $bindHost = $Matches[1].Trim() }
+            if ($line -match '^\s*AGENT_DECK_PORT\s*=\s*(.+)$') { $bindPort = $Matches[1].Trim() }
         }
     }
 

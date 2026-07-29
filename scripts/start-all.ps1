@@ -25,7 +25,7 @@ function Wait-ForPort {
     return $false
 }
 
-$backendPort = [int](Get-EnvValue "AGENT_HUB_PORT" "8765")
+$backendPort = [int](Get-EnvValue "AGENT_DECK_PORT" "8765")
 $frontendPort = 3000
 
 Write-Host "Agent Deck launcher" -ForegroundColor Cyan

@@ -48,28 +48,28 @@ Configured in `.env` at the repository root (see `.env.example`):
 
 | Variable | Default | Purpose |
 | --- | --- | --- |
-| `AGENT_HUB_HOST` | `127.0.0.1` | Backend bind address — keep localhost |
-| `AGENT_HUB_PORT` | `8765` | Backend port |
-| `AGENT_HUB_DATABASE_URL` | `sqlite:///./agent_hub.db` | SQLite URL (relative to `backend/`) |
-| `AGENT_HUB_WRITE_TOKEN` | *(empty)* | Bearer token required for **all write endpoints**. Empty = open writes (local dev only). Generate: `python -c "import secrets; print(secrets.token_urlsafe(32))"` |
-| `AGENT_HUB_CORS_ORIGINS` | `http://localhost:3000` | Allowed dashboard origins (comma-separated) |
-| `AGENT_HUB_WORKER_STALE_SECONDS` | `300` (`1200` in `.env`) | A worker with no heartbeat for this long is shown as offline — keep it above the heartbeat task's interval |
-| `AGENT_HUB_DISCORD_SUMMARY_WEBHOOK` | *(empty)* | Discord channel webhook receiving task summaries — see [Discord summaries](#discord-summaries). Empty disables them |
-| `AGENT_HUB_URL` | `http://127.0.0.1:8765` | Used by the `agent-report` CLI |
+| `AGENT_DECK_HOST` | `127.0.0.1` | Backend bind address — keep localhost |
+| `AGENT_DECK_PORT` | `8765` | Backend port |
+| `AGENT_DECK_DATABASE_URL` | `sqlite:///./agent_deck.db` | SQLite URL (relative to `backend/`) |
+| `AGENT_DECK_WRITE_TOKEN` | *(empty)* | Bearer token required for **all write endpoints**. Empty = open writes (local dev only). Generate: `python -c "import secrets; print(secrets.token_urlsafe(32))"` |
+| `AGENT_DECK_CORS_ORIGINS` | `http://localhost:3000` | Allowed dashboard origins (comma-separated) |
+| `AGENT_DECK_WORKER_STALE_SECONDS` | `300` (`1200` in `.env`) | A worker with no heartbeat for this long is shown as offline — keep it above the heartbeat task's interval |
+| `AGENT_DECK_DISCORD_SUMMARY_WEBHOOK` | *(empty)* | Discord channel webhook receiving task summaries — see [Discord summaries](#discord-summaries). Empty disables them |
+| `AGENT_DECK_URL` | `http://127.0.0.1:8765` | Used by the `agent-report` CLI |
 
 Read-only endpoints (GET) are accessible locally without authentication in V1.
 If you set a write token and want to use dashboard actions (approve/reject/archive, project
-editing), also set `NEXT_PUBLIC_AGENT_HUB_WRITE_TOKEN` in `frontend\.env.local` — note this
+editing), also set `NEXT_PUBLIC_AGENT_DECK_WRITE_TOKEN` in `frontend\.env.local` — note this
 exposes the token to the local browser, which is acceptable only for this local-only setup.
 
-OpenACP-related settings (all optional): `AGENT_HUB_OPENACP_SETTINGS_PATH`,
-`AGENT_HUB_OPENACP_AGENTS_PATH`, `AGENT_HUB_OPENACP_BINDINGS_MODULE_DIR`,
-`AGENT_HUB_OPENACP_SETTINGS_BACKUP_DIR`, `AGENT_HUB_OPENACP_BACKUP_RETENTION`,
-`AGENT_HUB_OPENACP_HOOK_TIMEOUT_SECONDS`, `AGENT_HUB_OPENACP_INSTALL_TIMEOUT_SECONDS`,
-`AGENT_HUB_OPENACP_SETTINGS_EXPORT_PATH` (default `openacp-config/settings.json`).
+OpenACP-related settings (all optional): `AGENT_DECK_OPENACP_SETTINGS_PATH`,
+`AGENT_DECK_OPENACP_AGENTS_PATH`, `AGENT_DECK_OPENACP_BINDINGS_MODULE_DIR`,
+`AGENT_DECK_OPENACP_SETTINGS_BACKUP_DIR`, `AGENT_DECK_OPENACP_BACKUP_RETENTION`,
+`AGENT_DECK_OPENACP_HOOK_TIMEOUT_SECONDS`, `AGENT_DECK_OPENACP_INSTALL_TIMEOUT_SECONDS`,
+`AGENT_DECK_OPENACP_SETTINGS_EXPORT_PATH` (default `openacp-config/settings.json`).
 
-Screenshot settings: `AGENT_HUB_SCREENSHOT_DIR` (default `./screenshots`),
-`AGENT_HUB_SCREENSHOT_INSTALL_TIMEOUT_SECONDS`.
+Screenshot settings: `AGENT_DECK_SCREENSHOT_DIR` (default `./screenshots`),
+`AGENT_DECK_SCREENSHOT_INSTALL_TIMEOUT_SECONDS`.
 
 ## Database migrations
 
@@ -109,8 +109,8 @@ Health check: <http://127.0.0.1:8765/api/health> • Dashboard: <http://localhos
 
 ## Worker heartbeat task
 
-The **AgentHub Heartbeat** scheduled task posts a worker heartbeat every 15 minutes. Keep
-`AGENT_HUB_WORKER_STALE_SECONDS` (1200 in `.env.example`) above that interval — with the 300s
+The **AgentDeck Heartbeat** scheduled task posts a worker heartbeat every 15 minutes. Keep
+`AGENT_DECK_WORKER_STALE_SECONDS` (1200 in `.env.example`) above that interval — with the 300s
 default the worker would report offline between two beats. It runs
 `scripts\heartbeat-silent.vbs`, which starts `scripts\heartbeat.ps1` with no console window —
 pointing the task straight at `powershell.exe` flashes a window on screen every time it fires,
@@ -121,7 +121,7 @@ administrator rights:
 
 ```powershell
 $p = New-ScheduledTaskPrincipal -UserId $env:USERNAME -LogonType S4U -RunLevel Limited
-Set-ScheduledTask -TaskName 'AgentHub Heartbeat' -Principal $p
+Set-ScheduledTask -TaskName 'AgentDeck Heartbeat' -Principal $p
 ```
 
 ## Running OpenACP
@@ -169,7 +169,7 @@ verifies the install with user-site disabled, the way agents actually invoke it.
 
 Re-run it after rebuilding `backend\.venv`: the launcher points into that venv by absolute path.
 
-Agents also need `AGENT_HUB_WRITE_TOKEN` (and `AGENT_HUB_URL` if not the default) in their
+Agents also need `AGENT_DECK_WRITE_TOKEN` (and `AGENT_DECK_URL` if not the default) in their
 environment, otherwise every write returns 401. Set them as **user** environment variables so
 spawned agents inherit them, and restart OpenACP after changing them.
 
@@ -237,7 +237,7 @@ Exit codes: `0` success, `1` API error, `2` invalid arguments, `3` connection er
 Via the dashboard (**Projects → New project**) or the API:
 
 ```powershell
-$headers = @{ Authorization = "Bearer $env:AGENT_HUB_WRITE_TOKEN" }
+$headers = @{ Authorization = "Bearer $env:AGENT_DECK_WRITE_TOKEN" }
 Invoke-RestMethod -Method Post -Uri http://127.0.0.1:8765/api/projects -Headers $headers `
   -ContentType "application/json" `
   -Body '{"name": "CrowForge", "slug": "crowforge", "project_type": "desktop", "repository_path": "D:\\Projects\\CrowForge"}'
@@ -258,7 +258,7 @@ cd backend
 cd backend; .\.venv\Scripts\python.exe -m pytest
 
 # CLI
-cd cli; C:\agent-hub\backend\.venv\Scripts\python.exe -m pytest
+cd cli; C:\agent-deck\backend\.venv\Scripts\python.exe -m pytest
 
 # Frontend
 cd frontend
@@ -282,7 +282,7 @@ Set it up:
 1. In Discord, open the target channel → **Edit Channel → Integrations → Webhooks → New Webhook**
    and copy its URL. This is *not* the **Webhooks** page of the Discord Developer Portal — that
    one pushes Discord's own events out to another application, the opposite direction.
-2. Put the URL in `.env` as `AGENT_HUB_DISCORD_SUMMARY_WEBHOOK` and restart the backend.
+2. Put the URL in `.env` as `AGENT_DECK_DISCORD_SUMMARY_WEBHOOK` and restart the backend.
 
 A webhook URL addresses exactly one channel and carries no bot identity, so Agent Deck still
 stores no Discord credentials. Leaving the variable empty disables the feature.
@@ -390,7 +390,7 @@ pwsh -File .\scripts\make-distributable.ps1 -NoZip     # leaves a folder instead
 ```
 
 It copies source only and **leaves out** `.env`, `openacp-config/` (the bot-token bundle),
-`agent_hub.db` (your tasks), and all regenerated folders (`.venv`, `node_modules`, `.next`, caches,
+`agent_deck.db` (your tasks), and all regenerated folders (`.venv`, `node_modules`, `.next`, caches,
 `.git`, `.claude`). A `START-HERE.txt` is added for the recipient. They unzip it, double-click
 `install-agent-deck-prerequisites.bat`, then `start-agent-deck.bat`, and set up **their own** Discord
 bot — nothing of yours travels in the zip (verify: it contains `.env.example`, never `.env`, and no
@@ -399,7 +399,7 @@ bot token).
 ## Security limitations (V1)
 
 - The backend **must remain bound to localhost** unless protected by a secure private network.
-- Set `AGENT_HUB_WRITE_TOKEN` — with an empty token all writes are open (dev mode only).
+- Set `AGENT_DECK_WRITE_TOKEN` — with an empty token all writes are open (dev mode only).
 - **Secrets must not be committed** (`.env` is gitignored); the token is never logged.
 - Agent Deck stores **no** Claude, OpenAI or Discord credentials.
 - There is no user management/registration and API payloads are never executed as commands.
@@ -408,10 +408,10 @@ bot token).
   `POST /api/openacp/daemon/{restart,stop}` (`node scripts/install-hook.mjs`, `openacp
   restart|stop`), `POST /api/openacp/install` (`npm install -g @openacp/cli
   @openacp/discord-adapter`), and `POST /api/system/screenshot/install` (`pip install mss`).
-- `AGENT_HUB_OPENACP_SETTINGS_PATH` points at a file that **contains the Discord bot token**.
+- `AGENT_DECK_OPENACP_SETTINGS_PATH` points at a file that **contains the Discord bot token**.
   The API exposes only its `channelBindings` key. Backups written to
-  `AGENT_HUB_OPENACP_SETTINGS_BACKUP_DIR` are full copies of that file — they default to
-  `~/.agent-hub/settings-backups`, outside the repository, and **must be kept out of version
+  `AGENT_DECK_OPENACP_SETTINGS_BACKUP_DIR` are full copies of that file — they default to
+  `~/.agent-deck/settings-backups`, outside the repository, and **must be kept out of version
   control**.
 - Deleting an artifact removes only the database record — files on disk are never deleted.
 - **Agents must not be given permission to merge or push directly to the default branch**;
@@ -419,28 +419,28 @@ bot token).
 
 ## SQLite database backup
 
-The database lives at **`backend\agent_hub.db`**. To back it up, stop the backend and copy
+The database lives at **`backend\agent_deck.db`**. To back it up, stop the backend and copy
 the file:
 
 ```powershell
-Copy-Item C:\agent-hub\backend\agent_hub.db "D:\Backups\agent_hub-$(Get-Date -Format yyyyMMdd-HHmm).db"
+Copy-Item C:\agent-deck\backend\agent_deck.db "D:\Backups\agent_deck-$(Get-Date -Format yyyyMMdd-HHmm).db"
 ```
 
-(While the backend is running, prefer `sqlite3 agent_hub.db ".backup backup.db"` if you have
+(While the backend is running, prefer `sqlite3 agent_deck.db ".backup backup.db"` if you have
 the sqlite3 CLI, or simply stop the backend first.)
 
 ## Troubleshooting
 
 | Symptom | Fix |
 | --- | --- |
-| `agent-report` reports connection error (exit 3) | Backend not running — `.\scripts\start-backend.ps1`; check `AGENT_HUB_URL`. |
-| `401 Missing bearer token` | Set `AGENT_HUB_WRITE_TOKEN` in your shell/environment to match the backend `.env`. |
+| `agent-report` reports connection error (exit 3) | Backend not running — `.\scripts\start-backend.ps1`; check `AGENT_DECK_URL`. |
+| `401 Missing bearer token` | Set `AGENT_DECK_WRITE_TOKEN` in your shell/environment to match the backend `.env`. |
 | Dashboard shows "Backend offline" | Backend not running or wrong port; check <http://127.0.0.1:8765/api/health>. |
-| Dashboard actions fail with 401 | Set `NEXT_PUBLIC_AGENT_HUB_WRITE_TOKEN` in `frontend\.env.local` and restart the frontend. |
+| Dashboard actions fail with 401 | Set `NEXT_PUBLIC_AGENT_DECK_WRITE_TOKEN` in `frontend\.env.local` and restart the frontend. |
 | `alembic upgrade head` fails right after copying to a new PC | The copied `backend\.venv` points at the old PC's Python. Delete it and re-run `.\scripts\setup.ps1`. |
-| `alembic upgrade head` fails on an old DB | Back up `backend\agent_hub.db`, then investigate with `alembic current` / `alembic history`. |
+| `alembic upgrade head` fails on an old DB | Back up `backend\agent_deck.db`, then investigate with `alembic current` / `alembic history`. |
 | *Redeploy hook* returns `422` | The channel-bindings module is not built — `cd openacp-channel-bindings; npm run build`. |
-| Worker shows *offline (stale)* | No heartbeat within `AGENT_HUB_WORKER_STALE_SECONDS` (1200s); check the **AgentHub Heartbeat** task. If you shorten the threshold, shorten the task interval with it. |
+| Worker shows *offline (stale)* | No heartbeat within `AGENT_DECK_WORKER_STALE_SECONDS` (1200s); check the **AgentDeck Heartbeat** task. If you shorten the threshold, shorten the task interval with it. |
 | `agent-report` not found after install | Restart the terminal (PATH change), or re-run `.\scripts\install-agent-report.ps1`. |
 | `ModuleNotFoundError: No module named 'agent_report'` (command starts, then dies) | A `pip install --user` copy is being used; agents disable user-site. Re-run `.\scripts\install-agent-report.ps1`, which installs into the venv and removes the `--user` copy. |
 

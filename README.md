@@ -74,7 +74,7 @@ lands in the dashboard — and optionally in a Discord channel.
 Copy `.env.example` to `.env` (the installer does this). The one setting you should not skip:
 
 ```ini
-AGENT_HUB_WRITE_TOKEN=      # empty = every write endpoint is open
+AGENT_DECK_WRITE_TOKEN=      # empty = every write endpoint is open
 ```
 
 Generate one with `python -c "import secrets; print(secrets.token_urlsafe(32))"`.
@@ -87,7 +87,7 @@ This is a **local-only** application and its defaults assume that:
 
 - Keep the backend bound to `127.0.0.1`. It has no user accounts and read-only endpoints are
   unauthenticated.
-- Set `AGENT_HUB_WRITE_TOKEN`, or anything that reaches the port can write.
+- Set `AGENT_DECK_WRITE_TOKEN`, or anything that reaches the port can write.
 - Agent Deck stores no Claude, OpenAI or Discord credentials — but your **OpenACP settings file
   holds your Discord bot token**. Never commit it. `openacp-config/` is gitignored for this reason.
 - Don't grant agents permission to push to your default branch; the reporting templates keep

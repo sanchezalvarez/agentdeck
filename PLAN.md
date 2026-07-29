@@ -10,7 +10,7 @@ Agent Deck **iba zaznamenáva a zobrazuje** — neriadi agentov ani OpenACP.
    - Sekvenčné verejné ID úloh `REM-001…`.
    - Lifecycle endpointy (start/progress/testing/finish/fail/block/cancel/approve/reject/archive).
    - Úspešné dokončenie agentom → `needs_review`; `completed` až po manuálnom schválení.
-   - Zápisy chránené `Authorization: Bearer <AGENT_HUB_WRITE_TOKEN>`.
+   - Zápisy chránené `Authorization: Bearer <AGENT_DECK_WRITE_TOKEN>`.
    - SSE stream `/api/events/stream` s keep-alive.
 2. **cli/** — `agent-report` (argparse + httpx), komunikuje výhradne cez HTTP API.
 3. **frontend/** — Next.js (App Router, TS strict, Tailwind, shadcn-štýl komponenty).

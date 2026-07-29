@@ -11,9 +11,9 @@ SessionDep = Annotated[Session, Depends(get_session)]
 
 
 def require_write_token(authorization: Annotated[str | None, Header()] = None) -> None:
-    """Write endpoints require `Authorization: Bearer <AGENT_HUB_WRITE_TOKEN>`.
+    """Write endpoints require `Authorization: Bearer <AGENT_DECK_WRITE_TOKEN>`.
 
-    When AGENT_HUB_WRITE_TOKEN is empty, writes are allowed without a token
+    When AGENT_DECK_WRITE_TOKEN is empty, writes are allowed without a token
     (local development mode). The token value is never logged.
     """
     token = get_settings().write_token

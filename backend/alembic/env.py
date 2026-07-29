@@ -12,7 +12,7 @@ config = context.config
 if config.config_file_name is not None:
     fileConfig(config.config_file_name)
 
-# Take the database URL from application settings (AGENT_HUB_DATABASE_URL).
+# Take the database URL from application settings (AGENT_DECK_DATABASE_URL).
 config.set_main_option("sqlalchemy.url", get_settings().database_url)
 
 target_metadata = SQLModel.metadata

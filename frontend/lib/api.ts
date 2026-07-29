@@ -1,9 +1,9 @@
 export const API_URL =
-  process.env.NEXT_PUBLIC_AGENT_HUB_URL ?? "http://127.0.0.1:8765";
+  process.env.NEXT_PUBLIC_AGENT_DECK_URL ?? "http://127.0.0.1:8765";
 
 // Local-only deployment: the token (if any) is exposed to the browser on this
 // machine. Keep the backend bound to localhost.
-const WRITE_TOKEN = process.env.NEXT_PUBLIC_AGENT_HUB_WRITE_TOKEN ?? "";
+const WRITE_TOKEN = process.env.NEXT_PUBLIC_AGENT_DECK_WRITE_TOKEN ?? "";
 
 export class ApiError extends Error {
   constructor(

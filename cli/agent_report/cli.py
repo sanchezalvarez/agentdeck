@@ -37,7 +37,7 @@ def build_parser() -> argparse.ArgumentParser:
         description="Report Claude Code / Codex agent work to the local Agent Deck.",
     )
     parser.add_argument("--version", action="version", version=f"agent-report {__version__}")
-    parser.add_argument("--url", help="Agent Hub URL (default: AGENT_HUB_URL or http://127.0.0.1:8765)")
+    parser.add_argument("--url", help="Agent Hub URL (default: AGENT_DECK_URL or http://127.0.0.1:8765)")
     parser.add_argument("--timeout", type=float, default=15.0, help="HTTP timeout in seconds (default 15)")
     sub = parser.add_subparsers(dest="command", required=True)
 

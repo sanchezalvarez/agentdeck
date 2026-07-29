@@ -1,5 +1,14 @@
-# Secrets / local config
+# Secrets / local config. Broad on purpose: a stray .env.local or a timestamped
+# .env backup carries the write token just as plainly as .env itself.
 .env
+.env.*
+*.env
+.env.local
+.env.*.local
+*.local
+*.bak
+*.bak-*
+!.env.example
 
 # OpenACP settings bundle for moving to another PC — CONTAINS THE DISCORD BOT
 # TOKEN. Physically copied with the folder, but must NEVER be committed.

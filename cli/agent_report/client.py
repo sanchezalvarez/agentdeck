@@ -23,8 +23,8 @@ class AgentDeckConnectionError(Exception):
 class HubClient:
     def __init__(self, base_url: str | None = None, token: str | None = None,
                  timeout: float = DEFAULT_TIMEOUT):
-        self.base_url = (base_url or os.environ.get("AGENT_HUB_URL") or DEFAULT_URL).rstrip("/")
-        self.token = token if token is not None else os.environ.get("AGENT_HUB_WRITE_TOKEN", "")
+        self.base_url = (base_url or os.environ.get("AGENT_DECK_URL") or DEFAULT_URL).rstrip("/")
+        self.token = token if token is not None else os.environ.get("AGENT_DECK_WRITE_TOKEN", "")
         self.timeout = timeout
 
     def _headers(self) -> dict[str, str]:

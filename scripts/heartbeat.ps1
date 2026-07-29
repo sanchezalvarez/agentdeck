@@ -1,12 +1,12 @@
 # Sends a worker heartbeat to the local Agent Deck.
-# Runs from the "AgentHub Heartbeat" scheduled task (see README). Posts directly
+# Runs from the "AgentDeck Heartbeat" scheduled task (see README). Posts directly
 # to the HTTP API — no Python interpreter startup on every run. Reads the write
 # token from the repository .env so it does not depend on the task's environment.
 $ErrorActionPreference = "Stop"
 . (Join-Path $PSScriptRoot "lib.ps1")
 
-$token = Get-EnvValue "AGENT_HUB_WRITE_TOKEN" ""
-$hubUrl = Get-EnvValue "AGENT_HUB_URL" "http://127.0.0.1:8765"
+$token = Get-EnvValue "AGENT_DECK_WRITE_TOKEN" ""
+$hubUrl = Get-EnvValue "AGENT_DECK_URL" "http://127.0.0.1:8765"
 
 $payload = @{
     worker              = "Rembrosoft-Main-PC"

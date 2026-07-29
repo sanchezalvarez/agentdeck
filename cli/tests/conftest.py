@@ -35,8 +35,8 @@ class FakeAPI:
 def api(monkeypatch):
     fake = FakeAPI()
     monkeypatch.setattr(httpx, "request", fake.handler)
-    monkeypatch.setenv("AGENT_HUB_URL", "http://127.0.0.1:8765")
-    monkeypatch.setenv("AGENT_HUB_WRITE_TOKEN", "secret-token")
+    monkeypatch.setenv("AGENT_DECK_URL", "http://127.0.0.1:8765")
+    monkeypatch.setenv("AGENT_DECK_WRITE_TOKEN", "secret-token")
     return fake
 
 

@@ -2,7 +2,7 @@
 
 A channel webhook URL addresses exactly one channel and carries no bot
 identity, so Agent Deck still stores no Discord credentials (see README). The
-feature is off whenever AGENT_HUB_DISCORD_SUMMARY_WEBHOOK is empty.
+feature is off whenever AGENT_DECK_DISCORD_SUMMARY_WEBHOOK is empty.
 
 The summary text is whatever the agent itself reported to `agent-report
 finish/fail/block` — nothing here writes or rewrites it, so the message says

@@ -72,7 +72,7 @@ Pop-Location
 $envFile = Join-Path $root ".env"
 if (-not (Test-Path $envFile)) {
     Copy-Item (Join-Path $root ".env.example") $envFile
-    Write-Host "`nCreated .env from .env.example — review it and set AGENT_HUB_WRITE_TOKEN."
+    Write-Host "`nCreated .env from .env.example — review it and set AGENT_DECK_WRITE_TOKEN."
 } else {
     Write-Host "`n.env already exists — not overwriting."
 }
@@ -81,7 +81,7 @@ Write-Host @"
 
 === Setup complete ===
 Next steps:
-  1. Review .env (set AGENT_HUB_WRITE_TOKEN for authenticated writes).
+  1. Review .env (set AGENT_DECK_WRITE_TOKEN for authenticated writes).
   2. Start the backend:   .\scripts\start-backend.ps1
   3. Start the frontend:  .\scripts\start-frontend.ps1   (or .\scripts\start-all.ps1)
   4. Install the CLI:     .\scripts\install-agent-report.ps1

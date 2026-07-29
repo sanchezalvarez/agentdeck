@@ -8,7 +8,7 @@
 ' or not" would also work, but that change needs administrator rights.)
 Dim shell, script
 Set shell = CreateObject("WScript.Shell")
-script = "C:\agent-hub\scripts\heartbeat.ps1"
+script = "C:\agent-deck\scripts\heartbeat.ps1"
 
 ' 0 = hidden window, False = do not wait for it to finish.
 shell.Run "powershell.exe -NoProfile -ExecutionPolicy Bypass -File """ & script & """", 0, False
