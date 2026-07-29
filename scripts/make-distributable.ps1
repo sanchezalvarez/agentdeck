@@ -26,10 +26,15 @@ $stage = Join-Path $stageParent "agent-deck"
 # Directories and files never included in a shared copy.
 $excludeDirs = @(
     ".venv", "node_modules", ".next", "__pycache__", ".pytest_cache",
-    "build", "*.egg-info", ".git", ".claude", "openacp-config"
+    "build", "*.egg-info", ".git", ".claude", "openacp-config", "backup"
 )
+# Secrets are matched by pattern, not by exact name: ".env" alone does NOT
+# match frontend\.env.local, which carries the write token just as plainly.
+# ".env.*" is deliberately NOT used here - it would also drop .env.example,
+# which the recipient needs. The assertion below is the real backstop.
 $excludeFiles = @(
-    ".env", "agent_deck.db", "agent_deck.db-journal", "agent_deck.db-wal",
+    ".env", "*.local", "*.bak", "*.bak-*",
+    "agent_deck.db", "agent_deck.db-journal", "agent_deck.db-wal",
     "agent_deck.db-shm", "*.pyc", "*.tsbuildinfo"
 )
 
@@ -43,6 +48,24 @@ robocopy $root $stage /E /XD $excludeDirs /XF $excludeFiles /NFL /NDL /NJH /NJS 
 # robocopy uses bit-flag exit codes: 0-7 are success, 8+ are real failures.
 if ($LASTEXITCODE -ge 8) { throw "robocopy failed with exit code $LASTEXITCODE" }
 $global:LASTEXITCODE = 0
+
+# Backstop: refuse to ship anything that looks like a secret. An exclude list
+# is easy to get subtly wrong (".env" not matching ".env.local" once shipped a
+# live write token), so the staged tree is inspected rather than trusted.
+$leaked = Get-ChildItem $stage -Recurse -Force -File | Where-Object {
+    ($_.Name -like ".env*" -and $_.Name -ne ".env.example") -or
+    $_.Name -like "*.local" -or $_.Name -like "*.bak*" -or
+    $_.Name -like "*.db" -or $_.Name -eq "settings.json"
+}
+if ($leaked) {
+    $list = ($leaked | ForEach-Object { $_.FullName.Substring($stage.Length + 1) }) -join "`n  "
+    Remove-Item -Recurse -Force $stageParent
+    throw "Refusing to build: these files would have shipped:`n  $list"
+}
+if (-not (Test-Path (Join-Path $stage ".env.example"))) {
+    Remove-Item -Recurse -Force $stageParent
+    throw "Refusing to build: .env.example is missing - the recipient needs it."
+}
 
 # A short, recipient-facing start guide.
 $startHere = @"
