@@ -1,4 +1,4 @@
-# Agent Hub Reporting (copy into project CLAUDE.md)
+# Agent Deck Reporting (copy into project CLAUDE.md)
 
 <!--
 Copy this whole section into the project's CLAUDE.md and replace the placeholders:
@@ -12,7 +12,7 @@ Copy this whole section into the project's CLAUDE.md and replace the placeholder
 ## Context
 
 You are being controlled remotely through Discord via OpenACP. Every real task you work on
-has a task ID in the form `REM-###` in the local Rembrosoft Agent Hub. You must report your
+has a task ID in the form `REM-###` in the local Agent Deck. You must report your
 work to the Agent Hub using the `agent-report` CLI (already installed globally). The Agent Hub
 is a local monitoring tool — reporting to it does not replace your final Discord response.
 

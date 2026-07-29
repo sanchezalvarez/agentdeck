@@ -1,4 +1,4 @@
-# Agent Hub Reporting (copy into project AGENTS.md)
+# Agent Deck Reporting (copy into project AGENTS.md)
 
 <!--
 Copy this whole section into the project's AGENTS.md (Codex CLI) and replace:
@@ -12,7 +12,7 @@ Copy this whole section into the project's AGENTS.md (Codex CLI) and replace:
 ## Context
 
 You are being controlled remotely through Discord via OpenACP. Every real task has a
-`REM-###` task ID in the local Rembrosoft Agent Hub. Report your work through the globally
+`REM-###` task ID in the local Agent Deck. Report your work through the globally
 installed `agent-report` CLI. Reporting complements — it does not replace — your final
 Discord response.
 

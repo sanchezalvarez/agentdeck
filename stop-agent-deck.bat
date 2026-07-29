@@ -1,5 +1,5 @@
 @echo off
-REM Double-click stopper: kills the Agent Hub backend, the dashboard and the
+REM Double-click stopper: kills the Agent Deck backend, the dashboard and the
 REM OpenACP daemon. Closing the console windows alone does not always do this.
 REM
 REM Pass -KeepOpenAcp to leave the OpenACP daemon running.

@@ -10,7 +10,7 @@ arbitrary interpreter: agents were hitting
 
 because a bare `python agent-report.py` resolves neither the package next to
 this file nor its dependencies. So the script puts its own directory on the
-path, and re-executes itself in the Agent Hub venv when a dependency is still
+path, and re-executes itself in the Agent Deck venv when a dependency is still
 missing.
 """
 

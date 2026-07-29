@@ -4,7 +4,7 @@ import sys
 from typing import Any
 
 from . import __version__
-from .client import AgentHubConnectionError, AgentHubError, HubClient
+from .client import AgentDeckConnectionError, AgentDeckError, HubClient
 
 EXIT_OK = 0
 EXIT_API_ERROR = 1
@@ -34,7 +34,7 @@ def parse_metadata(value: str) -> dict[str, Any]:
 def build_parser() -> argparse.ArgumentParser:
     parser = argparse.ArgumentParser(
         prog="agent-report",
-        description="Report Claude Code / Codex agent work to the local Rembrosoft Agent Hub.",
+        description="Report Claude Code / Codex agent work to the local Agent Deck.",
     )
     parser.add_argument("--version", action="version", version=f"agent-report {__version__}")
     parser.add_argument("--url", help="Agent Hub URL (default: AGENT_HUB_URL or http://127.0.0.1:8765)")
@@ -315,10 +315,10 @@ def main(argv: list[str] | None = None) -> int:
     handler = HANDLERS[args.command]
     try:
         result = handler(client, args)
-    except AgentHubError as exc:
+    except AgentDeckError as exc:
         print(f"ERROR: {exc.detail} (HTTP {exc.status_code})", file=sys.stderr)
         return EXIT_API_ERROR
-    except AgentHubConnectionError as exc:
+    except AgentDeckConnectionError as exc:
         print(f"ERROR: {exc}", file=sys.stderr)
         return EXIT_CONNECTION
     render(args.command, result, getattr(args, "json", False))

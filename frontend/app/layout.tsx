@@ -4,7 +4,7 @@ import { Sidebar } from "@/components/layout/sidebar";
 import { Topbar } from "@/components/layout/topbar";
 
 export const metadata: Metadata = {
-  title: "Rembrosoft Agent Hub",
+  title: "Agent Deck",
   description: "Local overview of work performed by Claude Code and Codex agents",
 };
 

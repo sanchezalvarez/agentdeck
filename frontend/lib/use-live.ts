@@ -6,7 +6,7 @@ import { API_URL } from "./api";
 export type SseState = "connecting" | "live" | "polling";
 
 /**
- * Subscribes to the Agent Hub SSE stream and calls `onUpdate` when relevant
+ * Subscribes to the Agent Deck SSE stream and calls `onUpdate` when relevant
  * events arrive. Falls back to interval polling while the stream is down.
  */
 export function useLive(onUpdate: () => void, pollMs = 10000): SseState {

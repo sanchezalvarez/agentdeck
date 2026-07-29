@@ -21,7 +21,7 @@ backend/screenshots/
 openacp-channel-bindings/backup/
 
 # Output of scripts/make-distributable.ps1
-agent-hub.zip
+agent-deck.zip
 
 # SQLite database + backups
 *.db

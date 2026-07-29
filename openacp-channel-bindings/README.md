@@ -23,7 +23,7 @@ into it.
 
 ## Configuration
 
-> **Easier route:** the Agent Hub dashboard has an **OpenACP** page that edits these bindings
+> **Easier route:** the Agent Deck dashboard has an **OpenACP** page that edits these bindings
 > for you (add/remove project channels, agent dropdown, workspace validation) and can re-apply
 > the hook with a button. The manual JSON route below still works and is the source of truth.
 

@@ -1,9 +1,9 @@
-# Start the Agent Hub backend, the dashboard and the OpenACP daemon.
+# Start the Agent Deck backend, the dashboard and the OpenACP daemon.
 #
 # Anything already running is left untouched — re-running this script is safe
 # and will not produce "port already in use" errors.
 #
-# Note: starting OpenACP from here is a desktop convenience. The Agent Hub
+# Note: starting OpenACP from here is a desktop convenience. The Agent Deck
 # backend itself still never starts or stops OpenACP (see README).
 param(
     [switch]$NoBrowser,
@@ -28,7 +28,7 @@ function Wait-ForPort {
 $backendPort = [int](Get-EnvValue "AGENT_HUB_PORT" "8765")
 $frontendPort = 3000
 
-Write-Host "Agent Hub launcher" -ForegroundColor Cyan
+Write-Host "Agent Deck launcher" -ForegroundColor Cyan
 Write-Host "------------------"
 
 # --- Backend --------------------------------------------------------------

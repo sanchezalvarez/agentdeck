@@ -1,4 +1,4 @@
-# Rembrosoft Agent Hub - fresh-PC bootstrap.
+# Agent Deck - fresh-PC bootstrap.
 #
 # This is the ONE step that cannot live in the dashboard: the dashboard is a
 # Python backend + a Node frontend, so Python and Node must exist before it can
@@ -8,7 +8,7 @@
 # Runs under Windows PowerShell 5.1 too (a fresh PC has no pwsh yet), so this
 # file stays ASCII-only and 5.1-compatible.
 #
-# Run it once on a new PC by double-clicking install-agent-hub-prerequisites.bat
+# Run it once on a new PC by double-clicking install-agent-deck-prerequisites.bat
 # in the repository root, or directly:
 #
 #     powershell -ExecutionPolicy Bypass -File .\scripts\bootstrap.ps1
@@ -23,7 +23,7 @@ $PYTHON_PACKAGE = "Python.Python.3.12"
 $NODE_PACKAGE = "OpenJS.NodeJS.LTS"
 $PWSH_PACKAGE = "Microsoft.PowerShell"
 
-Write-Host "=== Agent Hub bootstrap ===" -ForegroundColor Cyan
+Write-Host "=== Agent Deck bootstrap ===" -ForegroundColor Cyan
 
 function Test-OnPath {
     param([string]$Command)
@@ -112,7 +112,7 @@ Write-Host "`nPrerequisites ready - running setup..." -ForegroundColor Cyan
 Write-Host @"
 
 === Bootstrap complete ===
-Next: install OpenACP itself - start Agent Hub (start-agent-hub.bat) and use the
+Next: install OpenACP itself - start Agent Deck (start-agent-deck.bat) and use the
 "Install OpenACP" button on the dashboard's OpenACP page, then apply your
 settings bundle and configure the OpenACP workspace.
 "@ -ForegroundColor Green

@@ -1,7 +1,7 @@
 """Posts task summaries to a Discord channel webhook.
 
 A channel webhook URL addresses exactly one channel and carries no bot
-identity, so Agent Hub still stores no Discord credentials (see README). The
+identity, so Agent Deck still stores no Discord credentials (see README). The
 feature is off whenever AGENT_HUB_DISCORD_SUMMARY_WEBHOOK is empty.
 
 The summary text is whatever the agent itself reported to `agent-report
@@ -92,7 +92,7 @@ def build_payload(kind: NotifyKind, task: Task, detail: str | None = None) -> di
                 "description": _truncate(detail or "(no summary reported)", MAX_SUMMARY_CHARS),
                 "color": colour,
                 "fields": fields,
-                "footer": {"text": f"Agent Hub · {footer}"},
+                "footer": {"text": f"Agent Deck · {footer}"},
             }
         ]
     }

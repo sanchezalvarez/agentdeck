@@ -336,7 +336,7 @@ export default function OpenAcpPage() {
 
       <p className="rounded border border-[color:color-mix(in_srgb,var(--accent-gold)_28%,transparent)] bg-[color:color-mix(in_srgb,var(--accent-gold)_12%,transparent)] px-3 py-2 text-sm text-[color:var(--accent-gold)]">
         Changes are written to OpenACP&apos;s <span className="font-mono text-xs">settings.json</span>.
-        <strong> OpenACP must be restarted manually</strong> for them to take effect — Agent Hub
+        <strong> OpenACP must be restarted manually</strong> for them to take effect — Agent Deck
         never starts or stops it.
       </p>
 
@@ -373,7 +373,7 @@ export default function OpenAcpPage() {
           {install && !install.npm_available && (
             <p className="rounded border border-[color:color-mix(in_srgb,var(--accent-gold)_28%,transparent)] bg-[color:color-mix(in_srgb,var(--accent-gold)_12%,transparent)] px-3 py-2 text-xs text-[color:var(--accent-gold)]">
               npm was not found on the backend&apos;s PATH — install Node.js 20+ first, then restart
-              the Agent Hub backend.
+              the Agent Deck backend.
             </p>
           )}
           <Button
@@ -486,8 +486,8 @@ export default function OpenAcpPage() {
             </p>
           ) : (
             <p className="text-xs text-[color:var(--muted-foreground)]">
-              Restart OpenACP to apply saved channel bindings. Agent Hub cannot restart its own
-              backend or dashboard — use <span className="font-mono">stop-agent-hub.bat</span> for
+              Restart OpenACP to apply saved channel bindings. Agent Deck cannot restart its own
+              backend or dashboard — use <span className="font-mono">stop-agent-deck.bat</span> for
               those.
             </p>
           )}

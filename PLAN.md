@@ -1,7 +1,7 @@
-# Rembrosoft Agent Hub — implementačný plán (V1)
+# Agent Deck — implementačný plán (V1)
 
 Lokálna aplikácia na evidenciu a kontrolu práce Claude Code / Codex agentov riadených cez Discord + OpenACP.
-Agent Hub **iba zaznamenáva a zobrazuje** — neriadi agentov ani OpenACP.
+Agent Deck **iba zaznamenáva a zobrazuje** — neriadi agentov ani OpenACP.
 
 ## Komponenty
 

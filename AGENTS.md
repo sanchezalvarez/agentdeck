@@ -1,17 +1,17 @@
-# Agent Hub — working reference
+# Agent Deck — working reference
 
-Operational detail for anyone (human or agent) working *on* this repository. For what Agent Hub
+Operational detail for anyone (human or agent) working *on* this repository. For what Agent Deck
 is and how to get it running, see [README.md](README.md).
 
 **Division of responsibilities (V1):**
 
 - **OpenACP** owns Discord communication and agent sessions.
-- **Agent Hub records and displays work**, and acts as a **control panel for OpenACP**: it edits
+- **Agent Deck records and displays work**, and acts as a **control panel for OpenACP**: it edits
   the Discord adapter's channel-binding configuration, re-applies the adapter hook, and can
   restart or stop the OpenACP daemon.
-- **Agent Hub never starts or stops Claude Code or Codex directly** — agents are launched by
+- **Agent Deck never starts or stops Claude Code or Codex directly** — agents are launched by
   OpenACP in response to Discord messages. It also cannot restart its own backend or dashboard;
-  use `stop-agent-hub.bat` / `start-agent-hub.bat` for that.
+  use `stop-agent-deck.bat` / `start-agent-deck.bat` for that.
 
 Task IDs are sequential: `REM-001`, `REM-002`, … Agents finish successful work as
 `needs_review`; only a human approval in the dashboard moves a task to `completed`.
@@ -98,10 +98,10 @@ alembic downgrade -1                      # roll back one migration
 .\scripts\make-distributable.ps1       # clean shareable zip (see below)
 ```
 
-`start-agent-hub.bat` useful flags: `-DryRun` reports what it would start without starting
+`start-agent-deck.bat` useful flags: `-DryRun` reports what it would start without starting
 anything, `-NoBrowser` skips opening the dashboard.
 
-`stop-agent-hub.bat` exists because closing the console windows does not reliably terminate the
+`stop-agent-deck.bat` exists because closing the console windows does not reliably terminate the
 processes they started. It only touches processes whose command line points at this repository
 or at the OpenACP CLI.
 
@@ -143,7 +143,7 @@ The start, stop and restart scripts now run `cleanup-openacp-tunnels.ps1` automa
 by hand if tunnels pile up anyway (`Get-Process cloudflared` shows more than one).
 
 Starting OpenACP from a launcher script is a desktop convenience and does **not** change the
-rule above: the Agent Hub backend itself never starts or stops OpenACP.
+rule above: the Agent Deck backend itself never starts or stops OpenACP.
 
 ## CLI installation
 
@@ -272,7 +272,7 @@ cd openacp-channel-bindings; npm run verify
 
 ## Discord summaries
 
-When a task **finishes**, **fails** or is **blocked**, Agent Hub posts a short summary to one
+When a task **finishes**, **fails** or is **blocked**, Agent Deck posts a short summary to one
 Discord channel. The text is the agent's own report — whatever it passed to `agent-report
 finish --summary`, `fail --error` or `block --reason`. Nothing rewrites it and no extra model is
 involved, so the message says what the agent that did the work says, whichever agent that was.
@@ -284,7 +284,7 @@ Set it up:
    one pushes Discord's own events out to another application, the opposite direction.
 2. Put the URL in `.env` as `AGENT_HUB_DISCORD_SUMMARY_WEBHOOK` and restart the backend.
 
-A webhook URL addresses exactly one channel and carries no bot identity, so Agent Hub still
+A webhook URL addresses exactly one channel and carries no bot identity, so Agent Deck still
 stores no Discord credentials. Leaving the variable empty disables the feature.
 
 Delivery is fire-and-forget on a daemon thread: a slow or unreachable Discord is logged and
@@ -353,7 +353,7 @@ The **System** page in the dashboard groups the "install a dependency from a but
 
 - **Prerequisites (Python / Node).** These **cannot** be installed from the dashboard — it is
   itself a Python + Node app, so both must exist before it runs. On a fresh PC, double-click
-  `install-agent-hub-prerequisites.bat` in the repository root: it installs Python 3.12+,
+  `install-agent-deck-prerequisites.bat` in the repository root: it installs Python 3.12+,
   Node 20+ and PowerShell 7 via winget, then runs `scripts\setup.ps1`.
 
 ## Moving to another PC
@@ -366,9 +366,9 @@ The path is:
    this writes the live OpenACP settings (**Discord bot token included**) into `openacp-config/`
    inside the repo. That folder is **gitignored**; it must never be committed.
 2. Copy the repository.
-3. Double-click `install-agent-hub-prerequisites.bat` (installs Python, Node and PowerShell 7 via
+3. Double-click `install-agent-deck-prerequisites.bat` (installs Python, Node and PowerShell 7 via
    winget, then runs `setup.ps1` — recreates the venv, installs `node_modules`, creates `.env`).
-4. Start Agent Hub (`start-agent-hub.bat`).
+4. Start Agent Deck (`start-agent-deck.bat`).
 5. On the dashboard's **OpenACP** page, click *Install OpenACP*.
 6. Click *Apply bundle to this PC* to restore the OpenACP settings from `openacp-config/`
    (the previous file, if any, is kept as `settings.json.pre-import.bak`), then restart OpenACP.
@@ -381,10 +381,10 @@ The path is:
 
 ## Send a clean copy to someone else
 
-To hand Agent Hub to another person without any of your data, build a shareable zip:
+To hand Agent Deck to another person without any of your data, build a shareable zip:
 
 ```powershell
-pwsh -File .\scripts\make-distributable.ps1            # -> Desktop\agent-hub.zip
+pwsh -File .\scripts\make-distributable.ps1            # -> Desktop\agent-deck.zip
 pwsh -File .\scripts\make-distributable.ps1 -OutDir D:\out
 pwsh -File .\scripts\make-distributable.ps1 -NoZip     # leaves a folder instead
 ```
@@ -392,7 +392,7 @@ pwsh -File .\scripts\make-distributable.ps1 -NoZip     # leaves a folder instead
 It copies source only and **leaves out** `.env`, `openacp-config/` (the bot-token bundle),
 `agent_hub.db` (your tasks), and all regenerated folders (`.venv`, `node_modules`, `.next`, caches,
 `.git`, `.claude`). A `START-HERE.txt` is added for the recipient. They unzip it, double-click
-`install-agent-hub-prerequisites.bat`, then `start-agent-hub.bat`, and set up **their own** Discord
+`install-agent-deck-prerequisites.bat`, then `start-agent-deck.bat`, and set up **their own** Discord
 bot — nothing of yours travels in the zip (verify: it contains `.env.example`, never `.env`, and no
 bot token).
 
@@ -401,7 +401,7 @@ bot token).
 - The backend **must remain bound to localhost** unless protected by a secure private network.
 - Set `AGENT_HUB_WRITE_TOKEN` — with an empty token all writes are open (dev mode only).
 - **Secrets must not be committed** (`.env` is gitignored); the token is never logged.
-- Agent Hub stores **no** Claude, OpenAI or Discord credentials.
+- Agent Deck stores **no** Claude, OpenAI or Discord credentials.
 - There is no user management/registration and API payloads are never executed as commands.
   The exceptions run a fixed command with a fixed argument list — no shell, no user-supplied
   input, a timeout, and a write token: `POST /api/openacp/redeploy` and
@@ -455,7 +455,7 @@ scripts/    setup.ps1, start-backend.ps1, start-frontend.ps1, start-all.ps1, sto
             restart-openacp.ps1, install-agent-report.ps1, heartbeat.ps1,
             heartbeat-silent.vbs, cleanup-openacp-tunnels.ps1, make-distributable.ps1,
             lib.ps1 (helpers shared by the scripts above)
-start-agent-hub.bat        Double-click launcher (backend + dashboard + OpenACP)
-stop-agent-hub.bat         Double-click stopper
+start-agent-deck.bat        Double-click launcher (backend + dashboard + OpenACP)
+stop-agent-deck.bat         Double-click stopper
 openacp-channel-bindings/  Discord channel -> project bindings for the OpenACP adapter (TS + vitest)
 ```

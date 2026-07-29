@@ -1,4 +1,4 @@
-# Start the Agent Hub backend (runs migrations first)
+# Start the Agent Deck backend (runs migrations first)
 $ErrorActionPreference = "Stop"
 $root = Split-Path -Parent $PSScriptRoot
 $backend = Join-Path $root "backend"

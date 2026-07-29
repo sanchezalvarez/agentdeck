@@ -112,7 +112,7 @@ def read_channel_bindings(path: str) -> tuple[list[ChannelBindingRead], list[Inv
 
 
 def pair_with_projects(rows: list[RowT], projects: Iterable[Any]) -> list[RowT]:
-    """Links each row to the Agent Hub project living at its workspace.
+    """Links each row to the Agent Deck project living at its workspace.
 
     Works on anything carrying workspace / project_id / project_name: channel
     bindings and live sessions both do.

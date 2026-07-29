@@ -1,6 +1,6 @@
 """Runs the channel-bindings install-hook script.
 
-SECURITY: this is the only place in Agent Hub that executes a subprocess. It
+SECURITY: this is the only place in Agent Deck that executes a subprocess. It
 runs one fixed script with a fixed argument list — no shell, no user-supplied
 input reaches the command line, and a timeout bounds it.
 """

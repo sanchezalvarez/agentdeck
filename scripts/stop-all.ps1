@@ -1,4 +1,4 @@
-# Stop the Agent Hub backend, the dashboard and the OpenACP daemon.
+# Stop the Agent Deck backend, the dashboard and the OpenACP daemon.
 #
 # Closing the console windows does not always terminate the processes they
 # started, which leaves ports 3000/8765 occupied. This kills them properly.
@@ -14,7 +14,7 @@ $root = Split-Path -Parent $PSScriptRoot
 . (Join-Path $PSScriptRoot "lib.ps1")
 $self = $PID
 
-Write-Host "Agent Hub — stopping services" -ForegroundColor Cyan
+Write-Host "Agent Deck — stopping services" -ForegroundColor Cyan
 Write-Host "-----------------------------"
 
 # --- OpenACP (graceful) ---------------------------------------------------
@@ -40,7 +40,7 @@ if ($KeepOpenAcp) {
     }
 }
 
-# --- Agent Hub processes --------------------------------------------------
+# --- Agent Deck processes --------------------------------------------------
 $rootPattern = "*$root*"
 
 $targets = Get-CimInstance Win32_Process | Where-Object {

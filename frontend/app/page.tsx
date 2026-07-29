@@ -89,7 +89,7 @@ export default function OverviewPage() {
       {daemon && !daemon.running && (
         <p className="rounded border border-[color:color-mix(in_srgb,var(--accent-gold)_28%,transparent)] bg-[color:color-mix(in_srgb,var(--accent-gold)_12%,transparent)] px-3 py-2 text-sm text-[color:var(--accent-gold)]">
           OpenACP is not running, so there is nothing to report. Sessions live inside OpenACP —
-          Agent Hub keeps no copy of them.
+          Agent Deck keeps no copy of them.
         </p>
       )}
 

@@ -17,7 +17,7 @@ MAX_BODY_BYTES = 2 * 1024 * 1024
 def create_app() -> FastAPI:
     settings = get_settings()
     app = FastAPI(
-        title="Rembrosoft Agent Hub",
+        title="Agent Deck",
         version=__version__,
         description="Local hub that records and displays work performed by Claude Code and Codex agents.",
     )

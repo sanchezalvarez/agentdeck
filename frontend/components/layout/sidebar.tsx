@@ -23,7 +23,7 @@ export function Sidebar() {
         <Link href="/" className="font-display text-sm text-[color:var(--foreground)]">
           Rembrosoft
           <span className="font-mono-ui block text-[10px] uppercase tracking-[0.08em] text-[color:var(--muted-foreground)]">
-            Agent Hub
+            Agent Deck
           </span>
         </Link>
       </div>
@@ -50,7 +50,7 @@ export function Sidebar() {
         })}
       </nav>
       <div className="mt-auto p-4 text-[10px] leading-relaxed text-[color:var(--muted-foreground)]">
-        Agents run via Discord / OpenACP. Agent Hub records their work and edits
+        Agents run via Discord / OpenACP. Agent Deck records their work and edits
         channel bindings — it never starts or stops them.
       </div>
     </aside>

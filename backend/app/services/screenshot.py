@@ -9,7 +9,7 @@ SECURITY: the only subprocess is a fixed "pip install mss" into this very
 interpreter — shell=False, no user input. Capture happens in-process.
 
 Note: mss grabs whatever desktop the backend process is attached to. This only
-does something useful when Agent Hub runs as a normal desktop app on the main
+does something useful when Agent Deck runs as a normal desktop app on the main
 PC, which is exactly how it is deployed.
 """
 

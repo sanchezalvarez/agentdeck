@@ -1,4 +1,4 @@
-# Agent Hub
+# Agent Deck
 
 Run **Claude Code** and **Codex** agents from Discord, and watch what they do on a local
 dashboard. Agents are driven remotely through [OpenACP](https://www.npmjs.com/package/@openacp/cli);
@@ -34,18 +34,18 @@ git clone https://github.com/sanchezalvarez/agentdeck.git
 cd agentdeck
 ```
 
-Then double-click **`install-agent-hub-prerequisites.bat`**. It installs anything missing via
+Then double-click **`install-agent-deck-prerequisites.bat`**. It installs anything missing via
 winget, creates the Python venv, installs dependencies and writes a starter `.env`.
 
 ## Run
 
-Double-click **`start-agent-hub.bat`** — it starts the backend, the dashboard and OpenACP,
+Double-click **`start-agent-deck.bat`** — it starts the backend, the dashboard and OpenACP,
 then opens <http://localhost:3000>. Running it twice is safe; it leaves anything already running
-alone. **`stop-agent-hub.bat`** shuts everything down.
+alone. **`stop-agent-deck.bat`** shuts everything down.
 
 ## Connect Discord
 
-Agent Hub does not ship a Discord bot — you use your own.
+Agent Deck does not ship a Discord bot — you use your own.
 
 1. Open the **OpenACP** page in the dashboard and click **Install OpenACP**.
 2. Create a Discord bot and point OpenACP at it, then map channels to projects on the same page.
@@ -88,7 +88,7 @@ This is a **local-only** application and its defaults assume that:
 - Keep the backend bound to `127.0.0.1`. It has no user accounts and read-only endpoints are
   unauthenticated.
 - Set `AGENT_HUB_WRITE_TOKEN`, or anything that reaches the port can write.
-- Agent Hub stores no Claude, OpenAI or Discord credentials — but your **OpenACP settings file
+- Agent Deck stores no Claude, OpenAI or Discord credentials — but your **OpenACP settings file
   holds your Discord bot token**. Never commit it. `openacp-config/` is gitignored for this reason.
 - Don't grant agents permission to push to your default branch; the reporting templates keep
   them on `agent/rem-###-*` branches.

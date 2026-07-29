@@ -7,7 +7,7 @@ DEFAULT_URL = "http://127.0.0.1:8765"
 DEFAULT_TIMEOUT = 15.0
 
 
-class AgentHubError(Exception):
+class AgentDeckError(Exception):
     """API returned an error response."""
 
     def __init__(self, status_code: int, detail: str):
@@ -16,8 +16,8 @@ class AgentHubError(Exception):
         super().__init__(f"HTTP {status_code}: {detail}")
 
 
-class AgentHubConnectionError(Exception):
-    """Could not reach the Agent Hub backend."""
+class AgentDeckConnectionError(Exception):
+    """Could not reach the Agent Deck backend."""
 
 
 class HubClient:
@@ -42,8 +42,8 @@ class HubClient:
                 headers=self._headers(), timeout=self.timeout,
             )
         except httpx.HTTPError as exc:
-            raise AgentHubConnectionError(
-                f"Could not reach Agent Hub at {self.base_url} ({exc.__class__.__name__}). "
+            raise AgentDeckConnectionError(
+                f"Could not reach Agent Deck at {self.base_url} ({exc.__class__.__name__}). "
                 "Is the backend running? Start it with scripts\\start-backend.ps1"
             ) from exc
         if response.status_code >= 400:
@@ -51,7 +51,7 @@ class HubClient:
                 detail = response.json().get("detail", response.text)
             except ValueError:
                 detail = response.text
-            raise AgentHubError(response.status_code, str(detail))
+            raise AgentDeckError(response.status_code, str(detail))
         if response.status_code == 204 or not response.content:
             return None
         return response.json()

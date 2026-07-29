@@ -71,7 +71,7 @@ class ChannelBindingRead(BaseModel):
     # False when the configured directory is gone — the adapter would ignore
     # this binding, so the UI warns before the user tries to save it again.
     workspace_exists: bool
-    # The Agent Hub project whose repository_path is this workspace, if any.
+    # The Agent Deck project whose repository_path is this workspace, if any.
     # Resolved on read from the path itself — settings.json stores no id, so
     # there is nothing that can go stale when a project is renamed or deleted.
     project_id: int | None = None
@@ -81,7 +81,7 @@ class ChannelBindingRead(BaseModel):
 class OpenAcpSessionRead(BaseModel):
     """One live OpenACP session — a single Discord thread.
 
-    Read straight from the running server; Agent Hub stores none of this. When
+    Read straight from the running server; Agent Deck stores none of this. When
     OpenACP is down there is no history to fall back on.
     """
 

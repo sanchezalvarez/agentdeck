@@ -163,7 +163,7 @@ export interface ChannelBinding {
   agent: string;
   workspace: string;
   workspace_exists: boolean;
-  /** Agent Hub project at this workspace path, resolved on read. */
+  /** Agent Deck project at this workspace path, resolved on read. */
   project_id: number | null;
   project_name: string | null;
 }

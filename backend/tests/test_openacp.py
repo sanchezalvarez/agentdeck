@@ -104,7 +104,7 @@ def binding(channel_id: str, workspace: str, agent: str = "claude") -> dict:
 
 def test_binding_is_paired_with_project_by_path(client, auth, openacp_env):
     """The workspace path is the only link between a Discord channel and an
-    Agent Hub project — settings.json stores no project id."""
+    Agent Deck project — settings.json stores no project id."""
     client.post(
         "/api/projects",
         json={"name": "TheLosers", "repository_path": openacp_env["workspace_a"]},

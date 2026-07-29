@@ -1,8 +1,8 @@
-# Rembrosoft Agent Hub — one-time setup
+# Agent Deck — one-time setup
 $ErrorActionPreference = "Stop"
 $root = Split-Path -Parent $PSScriptRoot
 
-Write-Host "=== Rembrosoft Agent Hub setup ===" -ForegroundColor Cyan
+Write-Host "=== Agent Deck setup ===" -ForegroundColor Cyan
 
 # 1. Verify prerequisites
 try {

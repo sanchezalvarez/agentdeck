@@ -159,7 +159,7 @@ def test_connection_error_returns_exit_3(api, capsys):
     api.raise_connect_error = True
     code = main(["progress", "--task", "REM-104", "--message", "hello"])
     assert code == 3
-    assert "Could not reach Agent Hub" in capsys.readouterr().err
+    assert "Could not reach Agent Deck" in capsys.readouterr().err
 
 
 def test_missing_required_argument_exits_2(api):

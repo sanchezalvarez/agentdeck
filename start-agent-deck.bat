@@ -1,5 +1,5 @@
 @echo off
-REM Double-click launcher: starts the Agent Hub backend, the dashboard and the
+REM Double-click launcher: starts the Agent Deck backend, the dashboard and the
 REM OpenACP daemon. Anything already running is left alone.
 REM
 REM Pass -NoBrowser to skip opening the dashboard automatically.

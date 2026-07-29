@@ -1,7 +1,7 @@
 [project]
-name = "agent-hub-backend"
+name = "agent-deck-backend"
 version = "1.0.0"
-description = "Rembrosoft Agent Hub backend (FastAPI + SQLite)"
+description = "Agent Deck backend (FastAPI + SQLite)"
 requires-python = ">=3.12"
 dependencies = [
     "fastapi>=0.115",
