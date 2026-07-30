@@ -487,7 +487,7 @@ export default function OpenAcpPage() {
           ) : (
             <p className="text-xs text-[color:var(--muted-foreground)]">
               Restart OpenACP to apply saved channel bindings. Agent Deck cannot restart its own
-              backend or dashboard — use <span className="font-mono">stop-agent-deck.bat</span> for
+              backend or dashboard — use <span className="font-mono">agent-deck.bat stop</span> for
               those.
             </p>
           )}

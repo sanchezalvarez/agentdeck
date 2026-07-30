@@ -8,8 +8,8 @@
 # Runs under Windows PowerShell 5.1 too (a fresh PC has no pwsh yet), so this
 # file stays ASCII-only and 5.1-compatible.
 #
-# Run it once on a new PC by double-clicking install-agent-deck-prerequisites.bat
-# in the repository root, or directly:
+# Run it once on a new PC via agent-deck.bat in the repository root (choose
+# "Install", or pass it as an argument), or directly:
 #
 #     powershell -ExecutionPolicy Bypass -File .\scripts\bootstrap.ps1
 #
@@ -112,7 +112,7 @@ Write-Host "`nPrerequisites ready - running setup..." -ForegroundColor Cyan
 Write-Host @"
 
 === Bootstrap complete ===
-Next: install OpenACP itself - start Agent Deck (start-agent-deck.bat) and use the
+Next: install OpenACP itself - start Agent Deck (agent-deck.bat start) and use the
 "Install OpenACP" button on the dashboard's OpenACP page, then apply your
 settings bundle and configure the OpenACP workspace.
 "@ -ForegroundColor Green

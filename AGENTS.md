@@ -11,7 +11,7 @@ is and how to get it running, see [README.md](README.md).
   restart or stop the OpenACP daemon.
 - **Agent Deck never starts or stops Claude Code or Codex directly** — agents are launched by
   OpenACP in response to Discord messages. It also cannot restart its own backend or dashboard;
-  use `stop-agent-deck.bat` / `start-agent-deck.bat` for that.
+  use `agent-deck.bat stop` / `agent-deck.bat start` for that.
 
 Task IDs are sequential: `REM-001`, `REM-002`, … Agents finish successful work as
 `needs_review`; only a human approval in the dashboard moves a task to `completed`.
@@ -98,10 +98,19 @@ alembic downgrade -1                      # roll back one migration
 .\scripts\make-distributable.ps1       # clean shareable zip (see below)
 ```
 
-`start-agent-deck.bat` useful flags: `-DryRun` reports what it would start without starting
-anything, `-NoBrowser` skips opening the dashboard.
+`agent-deck.bat` is the only double-clickable entry point. With no argument it shows a
+start / stop / install menu; with an argument it goes straight to the action, which is what a
+shortcut or a scheduled task wants:
 
-`stop-agent-deck.bat` exists because closing the console windows does not reliably terminate the
+```powershell
+.\agent-deck.bat start      # -DryRun reports what it would start; -NoBrowser skips the browser
+.\agent-deck.bat stop       # -KeepOpenAcp leaves the OpenACP daemon running
+.\agent-deck.bat install    # prerequisites + setup, for a new PC
+```
+
+Anything after the action is passed through to the PowerShell script unchanged.
+
+`stop` exists because closing the console windows does not reliably terminate the
 processes they started. It only touches processes whose command line points at this repository
 or at the OpenACP CLI.
 
@@ -353,7 +362,7 @@ The **System** page in the dashboard groups the "install a dependency from a but
 
 - **Prerequisites (Python / Node).** These **cannot** be installed from the dashboard — it is
   itself a Python + Node app, so both must exist before it runs. On a fresh PC, double-click
-  `install-agent-deck-prerequisites.bat` in the repository root: it installs Python 3.12+,
+  `agent-deck.bat` in the repository root and pick **Install**: it installs Python 3.12+,
   Node 20+ and PowerShell 7 via winget, then runs `scripts\setup.ps1`.
 
 ## Moving to another PC
@@ -366,9 +375,9 @@ The path is:
    this writes the live OpenACP settings (**Discord bot token included**) into `openacp-config/`
    inside the repo. That folder is **gitignored**; it must never be committed.
 2. Copy the repository.
-3. Double-click `install-agent-deck-prerequisites.bat` (installs Python, Node and PowerShell 7 via
+3. Double-click `agent-deck.bat` → **Install** (installs Python, Node and PowerShell 7 via
    winget, then runs `setup.ps1` — recreates the venv, installs `node_modules`, creates `.env`).
-4. Start Agent Deck (`start-agent-deck.bat`).
+4. Start Agent Deck: `agent-deck.bat` → **Start**.
 5. On the dashboard's **OpenACP** page, click *Install OpenACP*.
 6. Click *Apply bundle to this PC* to restore the OpenACP settings from `openacp-config/`
    (the previous file, if any, is kept as `settings.json.pre-import.bak`), then restart OpenACP.
@@ -392,8 +401,8 @@ pwsh -File .\scripts\make-distributable.ps1 -NoZip     # leaves a folder instead
 It copies source only and **leaves out** `.env`, `openacp-config/` (the bot-token bundle),
 `agent_deck.db` (your tasks), and all regenerated folders (`.venv`, `node_modules`, `.next`, caches,
 `.git`, `.claude`). A `START-HERE.txt` is added for the recipient. They unzip it, double-click
-`install-agent-deck-prerequisites.bat`, then `start-agent-deck.bat`, and set up **their own** Discord
-bot — nothing of yours travels in the zip (verify: it contains `.env.example`, never `.env`, and no
+`agent-deck.bat`, pick **Install** and then **Start**, and set up **their own** Discord bot —
+nothing of yours travels in the zip (verify: it contains `.env.example`, never `.env`, and no
 bot token).
 
 ## Security limitations (V1)
@@ -455,7 +464,6 @@ scripts/    setup.ps1, start-backend.ps1, start-frontend.ps1, start-all.ps1, sto
             restart-openacp.ps1, install-agent-report.ps1, heartbeat.ps1,
             heartbeat-silent.vbs, cleanup-openacp-tunnels.ps1, make-distributable.ps1,
             lib.ps1 (helpers shared by the scripts above)
-start-agent-deck.bat        Double-click launcher (backend + dashboard + OpenACP)
-stop-agent-deck.bat         Double-click stopper
+agent-deck.bat             The only double-click entry point: start | stop | install
 openacp-channel-bindings/  Discord channel -> project bindings for the OpenACP adapter (TS + vitest)
 ```

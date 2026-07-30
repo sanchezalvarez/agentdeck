@@ -1,0 +1,6 @@
+# Windows batch and VBScript files must keep CRLF. cmd.exe can mis-parse
+# goto labels in an LF-only .bat, so this is correctness, not tidiness.
+*.bat text eol=crlf
+*.cmd text eol=crlf
+*.vbs text eol=crlf
+*.ps1 text eol=crlf

@@ -34,14 +34,23 @@ git clone https://github.com/sanchezalvarez/agentdeck.git
 cd agentdeck
 ```
 
-Then double-click **`install-agent-deck-prerequisites.bat`**. It installs anything missing via
+Then double-click **`agent-deck.bat`** and pick **Install**. It installs anything missing via
 winget, creates the Python venv, installs dependencies and writes a starter `.env`.
 
 ## Run
 
-Double-click **`start-agent-deck.bat`** — it starts the backend, the dashboard and OpenACP,
-then opens <http://localhost:3000>. Running it twice is safe; it leaves anything already running
-alone. **`stop-agent-deck.bat`** shuts everything down.
+Double-click **`agent-deck.bat`** and pick **Start** — it starts the backend, the dashboard and
+OpenACP, then opens <http://localhost:3000>. Running it twice is safe; it leaves anything already
+running alone. **Stop** shuts everything down.
+
+The same file takes the action as an argument, which is what you want in a shortcut or a
+scheduled task:
+
+```powershell
+.\agent-deck.bat start      # also: -NoBrowser, -DryRun
+.\agent-deck.bat stop
+.\agent-deck.bat install
+```
 
 ## Connect Discord
 

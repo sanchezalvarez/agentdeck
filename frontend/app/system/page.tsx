@@ -154,8 +154,9 @@ export default function SystemPage() {
           </p>
           <p className="text-xs text-[color:var(--muted-foreground)]">
             On a fresh PC, double-click{" "}
-            <span className="font-mono">install-agent-deck-prerequisites.bat</span> in the repository
-            root. It installs Python 3.12+, Node 20+ and PowerShell 7 via winget, then runs setup.
+            <span className="font-mono">agent-deck.bat</span> in the repository root and pick
+            &ldquo;Install&rdquo;. It installs Python 3.12+, Node 20+ and PowerShell 7 via winget,
+            then runs setup.
           </p>
         </CardContent>
       </Card>
