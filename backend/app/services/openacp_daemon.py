@@ -34,6 +34,11 @@ MAX_OUTPUT_CHARS = 4096
 # Sessions in these states hold resources and would be lost on restart.
 ACTIVE_SESSION_STATES = {"active", "initializing"}
 
+# A foreground instance owns a console window and writes no pid file, so the
+# OpenACP CLI cannot touch it. These scripts kill its node process directly and,
+# for a restart, spawn a fresh window. Fixed names — never built from input.
+FOREGROUND_SCRIPTS = {"restart": "restart-openacp.ps1", "stop": "stop-openacp.ps1"}
+
 CREATE_NEW_CONSOLE = 0x00000010
 # How long to wait for a restarted OpenACP to report itself online.
 STARTUP_TIMEOUT_SECONDS = 20
@@ -97,6 +102,75 @@ def _spawn_foreground(args: list[str], cwd: str | None) -> None:
         shell=False,
         close_fds=True,
         **kwargs,
+    )
+
+
+def _powershell() -> str | None:
+    """pwsh when installed, Windows PowerShell otherwise — the rule agent-deck.bat uses."""
+    return shutil.which("pwsh") or shutil.which("powershell")
+
+
+def _run_foreground_script(
+    action: str, scripts_dir: str, timeout: int, sessions_path: str
+) -> DaemonActionResult:
+    """Drives a foreground instance through the repository's own scripts.
+
+    SECURITY: the script name comes from FOREGROUND_SCRIPTS, never from input,
+    and the argument list is fixed — the same shape as openacp_hook.
+    """
+    shell = _powershell()
+    if not shell:
+        raise HTTPException(
+            status_code=503, detail="PowerShell was not found on the backend's PATH"
+        )
+
+    script = Path(scripts_dir) / FOREGROUND_SCRIPTS[action]
+    if not script.is_file():
+        raise HTTPException(status_code=503, detail=f"{script.name} not found in {scripts_dir}")
+
+    argv = [shell, "-NoProfile", "-ExecutionPolicy", "Bypass", "-File", str(script)]
+    if action == "restart":
+        # The dashboard already confirmed; the script must not wait on a prompt
+        # nobody can answer.
+        argv.append("-Force")
+
+    try:
+        result = subprocess.run(  # noqa: S603 - fixed argv, shell=False, no user input
+            argv,
+            capture_output=True,
+            text=True,
+            timeout=timeout,
+            shell=False,
+        )
+    except FileNotFoundError:
+        raise HTTPException(status_code=503, detail="PowerShell was not found on the backend's PATH")
+    except subprocess.TimeoutExpired:
+        raise HTTPException(status_code=504, detail=f"openacp {action} timed out")
+
+    output = _truncate("\n".join(part for part in (result.stdout, result.stderr) if part))
+
+    if action == "stop":
+        status = read_status(timeout, sessions_path)
+        # The script exits non-zero when the port is still answering.
+        ok = result.returncode == 0 and not status.running
+        return DaemonActionResult(
+            ok=ok,
+            action=action,
+            output=output or ("OpenACP stopped" if ok else "OpenACP stop failed"),
+            status=status,
+        )
+
+    status = _wait_until_running(timeout, sessions_path)
+    message = (
+        "OpenACP was restarted in its own console window."
+        if status.running
+        else f"OpenACP did not come back within {STARTUP_TIMEOUT_SECONDS}s — check its window."
+    )
+    return DaemonActionResult(
+        ok=status.running,
+        action=action,
+        output=_truncate("\n".join(part for part in (output, message) if part)),
+        status=status,
     )
 
 
@@ -290,7 +364,9 @@ def _workspace_dir(timeout: int) -> str | None:
     return str(Path(directory).parent)
 
 
-def run_action(action: str, timeout: int, sessions_path: str) -> DaemonActionResult:
+def run_action(
+    action: str, timeout: int, sessions_path: str, scripts_dir: str, script_timeout: int
+) -> DaemonActionResult:
     if action not in {"restart", "stop"}:
         raise HTTPException(status_code=422, detail="Unsupported daemon action")
 
@@ -301,18 +377,12 @@ def run_action(action: str, timeout: int, sessions_path: str) -> DaemonActionRes
         raise HTTPException(status_code=409, detail="Another OpenACP action is already running")
 
     try:
-        # A foreground instance owns a console window and writes no PID file:
-        # "openacp stop" would not touch it, and a restart would spawn a second
-        # instance fighting the first one for the API port.
+        # A foreground instance writes no PID file, so "openacp stop" cannot see
+        # it and a plain restart would spawn a second instance fighting the first
+        # one for the API port. The scripts kill its node process instead.
         current = read_status(timeout, sessions_path)
         if current.foreground:
-            raise HTTPException(
-                status_code=409,
-                detail=(
-                    "OpenACP is running in the foreground. Restart or stop it in its own "
-                    "console window (Ctrl+C, then scripts\\start-openacp.ps1)."
-                ),
-            )
+            return _run_foreground_script(action, scripts_dir, script_timeout, sessions_path)
 
         cwd = _workspace_dir(timeout)
 

@@ -110,36 +110,44 @@ export default function OpenAcpPage() {
   const [saved, setSaved] = useState(false);
 
   const refresh = useCallback(async () => {
-    try {
-      const [bindings, agentList, hookStatus, daemonStatus, projectList, sessionList, installStatus] =
-        await Promise.all([
-          apiGet<ChannelBindingsResponse>("/api/openacp/channel-bindings"),
-          apiGet<OpenAcpAgent[]>("/api/openacp/agents"),
-          apiGet<HookStatus>("/api/openacp/hook-status"),
-          apiGet<DaemonStatus>("/api/openacp/daemon-status"),
-          apiGet<Project[]>("/api/projects"),
-          apiGet<OpenAcpSession[]>("/api/openacp/sessions"),
-          apiGet<OpenAcpInstallStatus>("/api/openacp/install-status"),
-        ]);
-      const transferStatus = await apiGet<SettingsTransferStatus>(
+    // Every card loads on its own. On a freshly copied PC the OpenACP endpoints
+    // answer 503 until settings.json exists, and one shared Promise.all would
+    // take the project list down with them — leaving the binding form with an
+    // empty project dropdown and no way to tell why.
+    const failures: string[] = [];
+    const load = async <T,>(label: string, path: string, apply: (value: T) => void) => {
+      try {
+        apply(await apiGet<T>(path));
+      } catch (err) {
+        failures.push(`${label}: ${err instanceof Error ? err.message : "request failed"}`);
+      }
+    };
+
+    await Promise.all([
+      load<ChannelBindingsResponse>(
+        "Channel bindings",
+        "/api/openacp/channel-bindings",
+        (bindings) => {
+          setOriginal(bindings);
+          setRows(toRows(bindings));
+        },
+      ),
+      load<OpenAcpAgent[]>("Agents", "/api/openacp/agents", setAgents),
+      load<HookStatus>("Hook status", "/api/openacp/hook-status", setHook),
+      load<DaemonStatus>("OpenACP server", "/api/openacp/daemon-status", setDaemon),
+      load<Project[]>("Projects", "/api/projects", setProjects),
+      load<OpenAcpSession[]>("Sessions", "/api/openacp/sessions", setSessions),
+      load<OpenAcpInstallStatus>("Install status", "/api/openacp/install-status", setInstall),
+      load<SettingsTransferStatus>(
+        "Settings bundle",
         "/api/openacp/settings/transfer-status",
-      );
-      setTransfer(transferStatus);
-      setOriginal(bindings);
-      setRows(toRows(bindings));
-      setAgents(agentList);
-      // Only projects with a repository path can be bound to a channel.
-      setProjects(projectList.filter((p) => p.repository_path));
-      setHook(hookStatus);
-      setInstall(installStatus);
-      setDaemon(daemonStatus);
-      setSessions(sessionList);
-      setError(null);
-      setFormError(null);
-      setSaved(false);
-    } catch (err) {
-      setError(err instanceof Error ? err.message : "Failed to load OpenACP settings");
-    }
+        setTransfer,
+      ),
+    ]);
+
+    setError(failures.length > 0 ? failures.join(" · ") : null);
+    setFormError(null);
+    setSaved(false);
   }, []);
 
   // Deliberately not using useLive here: an unrelated task event would discard
@@ -477,25 +485,19 @@ export default function OpenAcpPage() {
             </span>
             <span>Active sessions: <span className="font-mono">{daemon?.active_sessions ?? 0}</span></span>
           </div>
-          {daemon?.foreground ? (
-            <p className="rounded border border-[color:color-mix(in_srgb,var(--accent-gold)_28%,transparent)] bg-[color:color-mix(in_srgb,var(--accent-gold)_12%,transparent)] px-3 py-2 text-xs text-[color:var(--accent-gold)]">
-              OpenACP runs in its own console window, so it cannot be controlled from here.
-              To apply saved channel bindings, press <span className="font-mono">Ctrl+C</span> in
-              that window and run <span className="font-mono">scripts\start-openacp.ps1</span>{" "}
-              again.
-            </p>
-          ) : (
-            <p className="text-xs text-[color:var(--muted-foreground)]">
-              Restart OpenACP to apply saved channel bindings. Agent Deck cannot restart its own
-              backend or dashboard — use <span className="font-mono">agent-deck.bat stop</span> for
-              those.
-            </p>
-          )}
+          <p className="text-xs text-[color:var(--muted-foreground)]">
+            Restart OpenACP to apply saved channel bindings.
+            {daemon?.foreground
+              ? " It runs in its own console window: that window is closed and a new one opens in its place."
+              : ""}{" "}
+            Agent Deck cannot restart its own backend or dashboard — use{" "}
+            <span className="font-mono">agent-deck.bat stop</span> for those.
+          </p>
           <div className="flex gap-2">
             <Button
               variant="outline"
               size="sm"
-              disabled={daemonBusy || busy || daemon?.foreground}
+              disabled={daemonBusy || busy}
               onClick={() => setDaemonAction("restart")}
             >
               {daemonBusy && daemonAction === "restart" ? "Restarting…" : "Restart OpenACP"}
@@ -503,7 +505,7 @@ export default function OpenAcpPage() {
             <Button
               variant="destructive"
               size="sm"
-              disabled={daemonBusy || busy || !daemon?.running || daemon?.foreground}
+              disabled={daemonBusy || busy || !daemon?.running}
               onClick={() => setDaemonAction("stop")}
             >
               Stop OpenACP
@@ -616,7 +618,9 @@ export default function OpenAcpPage() {
         <CardContent className="space-y-3">
           <p className="text-xs text-[color:var(--muted-foreground)]">
             One Discord channel = one project. Every thread inside it becomes a separate session
-            using the fixed agent and workspace below.
+            using the fixed agent and workspace below. A project is selectable only once it has a
+            <strong> repository path</strong> — set one on the Projects page, or pick{" "}
+            <span className="font-mono">Custom path…</span> to type a folder by hand.
           </p>
 
           {original && original.invalid_entries.length > 0 && (
@@ -698,10 +702,18 @@ export default function OpenAcpPage() {
                           }}
                         >
                           <option value="">Select a project…</option>
+                          {/* A project without a repository path has no workspace to
+                              bind to. Show it disabled rather than hiding it — an
+                              absent project reads as a bug, not as missing input. */}
                           {projects.map((project) => (
-                            <option key={project.id} value={String(project.id)}>
+                            <option
+                              key={project.id}
+                              value={String(project.id)}
+                              disabled={!project.repository_path}
+                            >
                               {project.name}
                               {project.is_active ? "" : " (inactive)"}
+                              {project.repository_path ? "" : " — no repository path"}
                             </option>
                           ))}
                           <option value={CUSTOM}>Custom path…</option>

@@ -50,6 +50,13 @@ class Settings(BaseSettings):
     openacp_settings_backup_dir: str = str(Path.home() / ".agent-deck" / "settings-backups")
     openacp_backup_retention: int = 20
     openacp_hook_timeout_seconds: int = 120
+    # PowerShell scripts that stop or restart a *foreground* OpenACP instance.
+    # The CLI cannot: a foreground instance writes no pid file, so "openacp stop"
+    # does not find it. Resolved from this file like the bindings module dir.
+    openacp_scripts_dir: str = str(Path(__file__).resolve().parents[2] / "scripts")
+    # restart-openacp.ps1 stops the old instance, waits, then spawns a new
+    # console window — well over the plain CLI timeout.
+    openacp_foreground_action_timeout_seconds: int = 180
     # A global "npm install -g" can pull the network for minutes on a fresh PC.
     openacp_install_timeout_seconds: int = 300
     # Full copy of the OpenACP settings.json (token INCLUDED) kept inside the

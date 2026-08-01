@@ -68,7 +68,10 @@ if ($isRunning) {
 # run inside this script's shell and die with it. A fresh window keeps the log
 # visible and keeps OpenACP alive after this script exits.
 Write-Host "Starting OpenACP in a new window..." -ForegroundColor Cyan
-Start-Process pwsh -ArgumentList "-NoExit", "-File", (Join-Path $PSScriptRoot "start-openacp.ps1")
+# Windows PowerShell when pwsh is absent — a PC that skipped the bootstrap has
+# only the built-in one, and failing to start is worse than an older shell.
+$shell = if (Get-Command pwsh -ErrorAction SilentlyContinue) { "pwsh" } else { "powershell" }
+Start-Process $shell -ArgumentList "-NoExit", "-File", (Join-Path $PSScriptRoot "start-openacp.ps1")
 
 Start-Sleep -Seconds 5
 $after = openacp status --json 2>$null | ConvertFrom-Json

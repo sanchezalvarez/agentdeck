@@ -241,6 +241,8 @@ async def restart_daemon() -> DaemonActionResult:
         "restart",
         settings.openacp_hook_timeout_seconds,
         settings.openacp_sessions_path,
+        settings.openacp_scripts_dir,
+        settings.openacp_foreground_action_timeout_seconds,
     )
 
 
@@ -252,4 +254,6 @@ async def stop_daemon() -> DaemonActionResult:
         "stop",
         settings.openacp_hook_timeout_seconds,
         settings.openacp_sessions_path,
+        settings.openacp_scripts_dir,
+        settings.openacp_foreground_action_timeout_seconds,
     )

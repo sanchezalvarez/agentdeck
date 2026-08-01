@@ -38,6 +38,15 @@ const PATCHED_SESSION = `                let sessionId = this.core.sessionManage
                     sessionId = (await __channelBindings.ensureBoundSession(this, message, log)) ?? "unknown";
                 }`;
 
+/** Adapter release these patch anchors were written against. */
+const EXPECTED_ADAPTER_VERSION = '2026.518.1';
+
+function workspacePluginsDir() {
+  const home = process.env.USERPROFILE || process.env.HOME;
+  const workspace = process.env.OPENACP_WORKSPACE || (home ? join(home, 'openacp-workspace') : null);
+  return workspace ? join(workspace, '.openacp', 'plugins') : null;
+}
+
 /**
  * The adapter is usually installed twice: once globally by npm, and once inside
  * the OpenACP workspace (.openacp/plugins/node_modules), which is the copy
@@ -49,13 +58,10 @@ const PATCHED_SESSION = `                let sessionId = this.core.sessionManage
  */
 function defaultAdapterDists() {
   const candidates = [];
-  const home = process.env.USERPROFILE || process.env.HOME;
-  const workspace = process.env.OPENACP_WORKSPACE || (home ? join(home, 'openacp-workspace') : null);
+  const plugins = workspacePluginsDir();
 
-  if (workspace) {
-    candidates.push(
-      join(workspace, '.openacp', 'plugins', 'node_modules', '@openacp', 'discord-adapter', 'dist'),
-    );
+  if (plugins) {
+    candidates.push(join(plugins, 'node_modules', '@openacp', 'discord-adapter', 'dist'));
   }
   if (process.env.APPDATA) {
     candidates.push(
@@ -63,6 +69,42 @@ function defaultAdapterDists() {
     );
   }
   return candidates.filter((dir) => existsSync(join(dir, 'adapter.js')));
+}
+
+/**
+ * The workspace copy is the one OpenACP loads. When the plugin manifest
+ * declares the adapter but its dist is absent, patching the global copy alone
+ * would report success and change nothing OpenACP ever reads — the exact
+ * failure that makes Discord bindings look broken for no visible reason.
+ *
+ * Returns the missing dist path, or null when there is nothing to complain
+ * about (no workspace yet, or the adapter is genuinely not a workspace plugin).
+ */
+function missingWorkspaceAdapter() {
+  const plugins = workspacePluginsDir();
+  if (!plugins) return null;
+
+  const manifest = join(plugins, 'package.json');
+  if (!existsSync(manifest)) return null;
+
+  try {
+    const pkg = JSON.parse(readFileSync(manifest, 'utf8'));
+    if (!pkg?.dependencies?.['@openacp/discord-adapter']) return null;
+  } catch {
+    // An unreadable manifest is not evidence of a missing plugin.
+    return null;
+  }
+
+  const dist = join(plugins, 'node_modules', '@openacp', 'discord-adapter', 'dist');
+  return existsSync(join(dist, 'adapter.js')) ? null : dist;
+}
+
+function adapterVersion(distDir) {
+  try {
+    return JSON.parse(readFileSync(join(distDir, '..', 'package.json'), 'utf8')).version || 'unknown';
+  } catch {
+    return 'unknown';
+  }
 }
 
 function parseArgs(argv) {
@@ -84,9 +126,12 @@ function fail(msg) {
 }
 
 const args = parseArgs(process.argv.slice(2));
-const adapterDists = (args.adapters.length ? args.adapters : defaultAdapterDists()).map((dir) =>
-  resolve(dir),
-);
+const explicit = args.adapters.length > 0;
+const adapterDists = (explicit ? args.adapters : defaultAdapterDists()).map((dir) => resolve(dir));
+
+// Only meaningful for the default search — an explicit --adapter is the
+// caller's deliberate choice of what to patch.
+const missingWorkspace = explicit ? null : missingWorkspaceAdapter();
 
 if (adapterDists.length === 0) {
   fail('no installed discord-adapter found.\nPass an explicit path with --adapter <path>');
@@ -103,6 +148,13 @@ if (args.check) {
     const patched = readFileSync(join(dir, 'adapter.js'), 'utf8').includes(MARKER);
     if (!patched) allPatched = false;
     console.log(`${patched ? 'INSTALLED    ' : 'NOT INSTALLED'}  ${dir}`);
+  }
+  if (missingWorkspace) {
+    // Reported as not-installed: the patched global copy is not the one running.
+    allPatched = false;
+    console.log(`MISSING        ${missingWorkspace}`);
+    console.log('The workspace plugin is declared but not installed — run "openacp plugin install');
+    console.log('@openacp/discord-adapter", or reinstall OpenACP, then run this again.');
   }
   console.log(allPatched ? 'HOOK INSTALLED' : 'HOOK NOT INSTALLED');
   process.exit(allPatched ? 0 : 2);
@@ -146,7 +198,13 @@ for (const dir of adapterDists) {
     continue;
   }
   if (!original.includes(ANCHOR_IMPORT) || !original.includes(ANCHOR_SESSION)) {
-    fail(`patch anchors not found in ${file} — this adapter version is not supported.`);
+    fail(
+      `patch anchors not found in ${file}\n` +
+        `  installed adapter: ${adapterVersion(dir)}\n` +
+        `  hook written for:  ${EXPECTED_ADAPTER_VERSION}\n` +
+        'Reinstall the pinned version (dashboard: OpenACP -> Install OpenACP), or update the\n' +
+        'anchors in this script to match the new adapter.',
+    );
   }
 
   writeFileSync(
@@ -157,6 +215,18 @@ for (const dir of adapterDists) {
     'utf8',
   );
   console.log(`  Patched ${file}`);
+}
+
+if (missingWorkspace) {
+  // Non-zero on purpose: the global copy is patched, but OpenACP loads the
+  // workspace one, so nothing that matters actually changed.
+  console.error(
+    `\nERROR: the copy OpenACP loads is missing — ${missingWorkspace}\n` +
+      'Only the global copy was patched, so Discord channel bindings will NOT work.\n' +
+      'Install the workspace plugin ("openacp plugin install @openacp/discord-adapter"),\n' +
+      'then run this again.',
+  );
+  process.exit(1);
 }
 
 console.log('\nDone. Restart OpenACP for the change to take effect.');

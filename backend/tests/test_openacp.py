@@ -46,6 +46,10 @@ def openacp_env(tmp_path, monkeypatch):
     workspace_b.mkdir()
 
     backup_dir = tmp_path / "backups"
+    scripts_dir = tmp_path / "scripts"
+    scripts_dir.mkdir()
+    for name in ("restart-openacp.ps1", "stop-openacp.ps1"):
+        (scripts_dir / name).write_text("# fake", encoding="utf-8")
     module_dir = tmp_path / "module"
     (module_dir / "scripts").mkdir(parents=True)
     (module_dir / "dist").mkdir()
@@ -73,6 +77,7 @@ def openacp_env(tmp_path, monkeypatch):
     monkeypatch.setattr(settings, "openacp_sessions_path", str(sessions_file))
     monkeypatch.setattr(settings, "openacp_settings_backup_dir", str(backup_dir))
     monkeypatch.setattr(settings, "openacp_bindings_module_dir", str(module_dir))
+    monkeypatch.setattr(settings, "openacp_scripts_dir", str(scripts_dir))
     monkeypatch.setattr(settings, "openacp_backup_retention", 20)
 
     return {
@@ -81,6 +86,7 @@ def openacp_env(tmp_path, monkeypatch):
         "sessions_file": sessions_file,
         "backup_dir": backup_dir,
         "module_dir": module_dir,
+        "scripts_dir": scripts_dir,
         "workspace_a": str(workspace_a),
         "workspace_b": str(workspace_b),
         "missing": str(tmp_path / "Gone"),
@@ -602,21 +608,76 @@ def test_daemon_status_detects_foreground_instance(client, openacp_env, fake_dae
     assert body["active_sessions"] == 1
 
 
-def test_daemon_action_refused_while_foreground(
+def test_foreground_restart_runs_the_restart_script(
     client, auth, openacp_env, fake_daemon, fake_spawn, no_sleep
 ):
-    """Stopping would miss the process entirely and a restart would spawn a
-    second instance fighting the first one for the API port."""
+    """A foreground instance writes no PID file, so "openacp stop" cannot see it
+    and the CLI alone would spawn a second instance fighting the first one for
+    the API port. restart-openacp.ps1 kills the node process and reopens the
+    window instead."""
+    calls = fake_daemon(
+        FakeCompleted(0, stdout=OFFLINE_STATUS),        # status: no daemon
+        FakeCompleted(0, stdout=FOREGROUND_SESSIONS),   # api status: alive after all
+        FakeCompleted(0, stdout="OpenACP stopped"),     # the PowerShell script
+        FakeCompleted(0, stdout=OFFLINE_STATUS),        # status again, after
+        FakeCompleted(0, stdout=FOREGROUND_SESSIONS),   # api status: back up
+    )
+    spawned = fake_spawn()
+    response = client.post("/api/openacp/daemon/restart", headers=auth)
+    body = response.json()
+
+    assert response.status_code == 200
+    assert body["ok"] is True
+    assert body["status"]["foreground"] is True
+
+    script_argv = calls[2]["argv"]
+    assert script_argv[-3:] == [
+        "-File",
+        str(openacp_env["scripts_dir"] / "restart-openacp.ps1"),
+        # The dashboard already confirmed; the script must not wait on a prompt
+        # nobody can answer.
+        "-Force",
+    ]
+    assert calls[2]["kwargs"]["shell"] is False
+    # The window is opened by the script, not by a Popen from the request.
+    assert spawned == []
+
+
+def test_foreground_stop_runs_the_stop_script(
+    client, auth, openacp_env, fake_daemon, fake_spawn, no_sleep
+):
+    calls = fake_daemon(
+        FakeCompleted(0, stdout=OFFLINE_STATUS),
+        FakeCompleted(0, stdout=FOREGROUND_SESSIONS),
+        FakeCompleted(0, stdout="OpenACP stopped"),      # the PowerShell script
+        FakeCompleted(0, stdout=OFFLINE_STATUS),         # status: gone
+        FakeCompleted(0, stdout='{"success": false}'),   # api status: nothing answers
+    )
+    fake_spawn()
+    body = client.post("/api/openacp/daemon/stop", headers=auth).json()
+
+    assert body["ok"] is True
+    assert body["status"]["running"] is False
+    assert calls[2]["argv"][-2:] == [
+        "-File",
+        str(openacp_env["scripts_dir"] / "stop-openacp.ps1"),
+    ]
+
+
+def test_foreground_action_without_its_script_is_reported(
+    client, auth, openacp_env, fake_daemon, fake_spawn, no_sleep
+):
+    """A checkout missing scripts\\ must say so rather than look like a dead daemon."""
+    (openacp_env["scripts_dir"] / "restart-openacp.ps1").unlink()
     fake_daemon(
         FakeCompleted(0, stdout=OFFLINE_STATUS),
         FakeCompleted(0, stdout=FOREGROUND_SESSIONS),
     )
-    spawned = fake_spawn()
+    fake_spawn()
     response = client.post("/api/openacp/daemon/restart", headers=auth)
 
-    assert response.status_code == 409
-    assert "console window" in response.json()["detail"]
-    assert spawned == []
+    assert response.status_code == 503
+    assert "restart-openacp.ps1" in response.json()["detail"]
 
 
 def test_sessions_are_listed_and_paired_with_projects(client, auth, openacp_env, fake_daemon):
@@ -1010,9 +1071,14 @@ def test_install_runs_global_npm_with_both_packages(client, auth, openacp_env, f
     assert body["ok"] is True
     assert body["status"]["cli_installed"] is True
     # Fixed argv, both packages, global, shell=False — no user input reaches it.
+    # The versions are pinned: install-hook.mjs patches the adapter's compiled
+    # output by matching exact anchors, so "latest" could silently break it.
     install_argv = calls[0]["argv"]
     assert install_argv[1:] == [
-        "install", "-g", "@openacp/cli", "@openacp/discord-adapter",
+        "install",
+        "-g",
+        f"@openacp/cli@{openacp_install.CLI_VERSION}",
+        f"@openacp/discord-adapter@{openacp_install.ADAPTER_VERSION}",
     ]
     assert calls[0]["kwargs"]["shell"] is False
 

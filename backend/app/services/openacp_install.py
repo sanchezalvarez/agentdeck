@@ -19,10 +19,18 @@ from fastapi import HTTPException
 from ..schemas.openacp import InstallResult, InstallStatusRead
 
 # The two packages OpenACP is made of: the CLI binary and the Discord adapter
-# plugin. Both are pinned by name only — npm resolves the latest published
-# version, matching how they were installed originally.
+# plugin.
 CLI_PACKAGE = "@openacp/cli"
 ADAPTER_PACKAGE = "@openacp/discord-adapter"
+
+# Pinned on purpose. install-hook.mjs patches the adapter's *compiled*
+# adapter.js by matching exact code anchors, so an adapter release that moves
+# those lines silently breaks the Discord channel bindings the moment npm
+# resolves "latest" on a fresh PC. Bump these only together with the anchors in
+# openacp-channel-bindings/scripts/install-hook.mjs, after re-running the hook
+# against the new version.
+CLI_VERSION = "2026.518.2"
+ADAPTER_VERSION = "2026.518.1"
 
 MAX_OUTPUT_CHARS = 8192
 
@@ -104,7 +112,10 @@ def read_status(timeout: int) -> InstallStatusRead:
             cli_version=None,
             adapter_installed=_adapter_installed(npm, timeout),
             npm_available=True,
-            detail="OpenACP is not installed. Click Install to add it globally via npm.",
+            detail=(
+                f"OpenACP is not installed. Click Install to add it globally via npm "
+                f"(pinned to CLI {CLI_VERSION} / adapter {ADAPTER_VERSION})."
+            ),
         )
 
     return InstallStatusRead(
@@ -117,10 +128,11 @@ def read_status(timeout: int) -> InstallStatusRead:
 
 
 def run_install(timeout: int) -> InstallResult:
-    """Installs (or updates to latest) the CLI and Discord adapter globally.
+    """Installs the pinned CLI and Discord adapter globally.
 
-    Idempotent: running it when they are already present re-resolves them to the
-    latest published version, which is harmless.
+    Idempotent: running it when they are already present re-installs the same
+    two versions, which is harmless — and is also how a PC that drifted onto a
+    newer adapter is brought back to the version the hook can patch.
     """
     npm = _npm_path()
     if not npm:
@@ -135,7 +147,13 @@ def run_install(timeout: int) -> InstallResult:
     try:
         try:
             result = subprocess.run(  # noqa: S603 - fixed argv, shell=False, no user input
-                [npm, "install", "-g", CLI_PACKAGE, ADAPTER_PACKAGE],
+                [
+                    npm,
+                    "install",
+                    "-g",
+                    f"{CLI_PACKAGE}@{CLI_VERSION}",
+                    f"{ADAPTER_PACKAGE}@{ADAPTER_VERSION}",
+                ],
                 capture_output=True,
                 text=True,
                 timeout=timeout,
