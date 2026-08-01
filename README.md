@@ -39,9 +39,12 @@ winget, creates the Python venv, installs dependencies and writes a starter `.en
 
 ## Run
 
-Double-click **`agent-deck.bat`** and pick **Start** — it starts the backend, the dashboard and
-OpenACP, then opens <http://localhost:3000>. Running it twice is safe; it leaves anything already
-running alone. **Stop** shuts everything down.
+Double-click **`start-agent-deck.bat`** — it starts the backend, the dashboard and OpenACP, then
+opens <http://localhost:3000>. Running it twice is safe; it leaves anything already running
+alone. **`stop-agent-deck.bat`** shuts everything down.
+
+Both are shortcuts for **`agent-deck.bat`**, which shows a start / stop / install menu when you
+double-click it.
 
 The same file takes the action as an argument, which is what you want in a shortcut or a
 scheduled task:

@@ -92,15 +92,16 @@ alembic downgrade -1                      # roll back one migration
 .\scripts\start-frontend.ps1   # Next.js on http://localhost:3000
 .\scripts\start-all.ps1        # backend + dashboard + OpenACP, one window each
 .\scripts\stop-all.ps1         # stop all three (-KeepOpenAcp leaves OpenACP running)
-.\scripts\start-openacp.ps1    # OpenACP alone, in this window
-.\scripts\restart-openacp.ps1  # restart OpenACP from the terminal
+.\scripts\start-openacp.ps1    # OpenACP alone, in this window (repairs the hook first)
+.\scripts\restart-openacp.ps1  # restart OpenACP from the terminal (-Force skips the prompt)
+.\scripts\stop-openacp.ps1     # stop OpenACP, daemon or foreground
 .\scripts\cleanup-openacp-tunnels.ps1  # kill leaked cloudflared tunnels (-All: every OpenACP tunnel)
 .\scripts\make-distributable.ps1       # clean shareable zip (see below)
 ```
 
-`agent-deck.bat` is the only double-clickable entry point. With no argument it shows a
-start / stop / install menu; with an argument it goes straight to the action, which is what a
-shortcut or a scheduled task wants:
+`agent-deck.bat` holds the launcher logic. With no argument it shows a start / stop / install
+menu; with an argument it goes straight to the action, which is what a shortcut or a scheduled
+task wants:
 
 ```powershell
 .\agent-deck.bat start      # -DryRun reports what it would start; -NoBrowser skips the browser
@@ -109,6 +110,12 @@ shortcut or a scheduled task wants:
 ```
 
 Anything after the action is passed through to the PowerShell script unchanged.
+
+`start-agent-deck.bat` and `stop-agent-deck.bat` sit next to it for the two actions used daily,
+so starting and stopping are each one double-click rather than a double-click plus a menu
+choice. They `call agent-deck.bat` with the action and pass their own arguments through — no
+dispatch logic is duplicated. There is deliberately no install shortcut: that one runs once per
+PC and the menu is the better place for it.
 
 `stop` exists because closing the console windows does not reliably terminate the
 processes they started. It only touches processes whose command line points at this repository
@@ -144,15 +151,26 @@ spawned window rather than `openacp restart`, which would otherwise run inside t
 and die with it.
 
 `restart-openacp.ps1` asks for confirmation first, because restarting terminates running agent
-sessions; pass `-Force` to skip the prompt.
+sessions; pass `-Force` to skip the prompt. `stop-openacp.ps1` is its counterpart and stops
+either kind of instance — a daemon gracefully through the CLI, a foreground one by killing its
+node process, since `openacp stop` cannot see a process that wrote no pid file.
+
+Both are what the dashboard's **Restart / Stop OpenACP** buttons run when the instance is in the
+foreground: `POST /api/openacp/daemon/{restart,stop}` shells out to these two scripts (fixed
+argument list, no shell, no user input, a 180s timeout) instead of the CLI, which would miss the
+process. For a daemonized instance the CLI path is still used.
+
+`start-openacp.ps1` verifies the channel-bindings hook before every start and reinstalls it when
+it is missing, so an adapter update cannot leave Discord bindings silently dead. It skips the
+check when node is absent or the module is not built, and never fails the start over it.
 
 The OpenACP CLI does not stop its cloudflared tunnel child when it is killed or restarted, so
 orphaned tunnels used to accumulate (one per restart, each ~30 MB RAM plus network traffic).
 The start, stop and restart scripts now run `cleanup-openacp-tunnels.ps1` automatically; run it
 by hand if tunnels pile up anyway (`Get-Process cloudflared` shows more than one).
 
-Starting OpenACP from a launcher script is a desktop convenience and does **not** change the
-rule above: the Agent Deck backend itself never starts or stops OpenACP.
+The backend controls the OpenACP **daemon** — start, stop, restart — but still never starts or
+stops Claude Code or Codex: agents are launched by OpenACP in response to Discord messages.
 
 ## CLI installation
 
@@ -331,10 +349,20 @@ Three things to know:
 
 - **Saving requires an OpenACP restart.** The adapter reads its settings once at startup. Use
   the **Restart OpenACP** button on the page — it asks for confirmation and tells you how many
-  agent sessions the restart would terminate.
-- **The hook is lost when the Discord adapter is reinstalled or updated.** Use *Redeploy hook*
-  on the page (or `npm run install-hook` in `openacp-channel-bindings/`), then restart OpenACP.
-  A `422` from that endpoint means the module is not built — run `npm run build` there.
+  agent sessions the restart would terminate. It works for a foreground instance too; the old
+  console window closes and a new one opens in its place.
+- **The hook is lost when the Discord adapter is reinstalled or updated.** `start-openacp.ps1`
+  reinstalls it automatically on the next start; *Redeploy hook* on the page (or `npm run
+  install-hook` in `openacp-channel-bindings/`) does it on demand. A `422` from that endpoint
+  means the module is not built — run `npm run build` there.
+- **Only the workspace copy of the adapter matters at runtime.** `install-hook.mjs` patches
+  every installed copy, but OpenACP loads `.openacp/plugins/node_modules/@openacp/discord-adapter`.
+  When the plugin manifest declares the adapter and that copy is absent, the script now fails
+  loudly instead of patching the global copy and reporting success.
+- **The npm packages are pinned** (`openacp_install.py`: `CLI_VERSION`, `ADAPTER_VERSION`).
+  The hook patches the adapter's compiled `adapter.js` by matching exact code anchors, so
+  `latest` could silently move them. Bump both together with the anchors in `install-hook.mjs`,
+  after re-running the hook against the new version.
 - **OpenACP itself is not part of this repository.** On a freshly copied PC, the *OpenACP
   installation* card installs `@openacp/cli` + `@openacp/discord-adapter` globally via npm (same as
   `npm install -g @openacp/cli @openacp/discord-adapter`). It does not create the OpenACP workspace
@@ -413,10 +441,12 @@ bot token).
 - Agent Deck stores **no** Claude, OpenAI or Discord credentials.
 - There is no user management/registration and API payloads are never executed as commands.
   The exceptions run a fixed command with a fixed argument list — no shell, no user-supplied
-  input, a timeout, and a write token: `POST /api/openacp/redeploy` and
-  `POST /api/openacp/daemon/{restart,stop}` (`node scripts/install-hook.mjs`, `openacp
-  restart|stop`), `POST /api/openacp/install` (`npm install -g @openacp/cli
-  @openacp/discord-adapter`), and `POST /api/system/screenshot/install` (`pip install mss`).
+  input, a timeout, and a write token: `POST /api/openacp/redeploy`
+  (`node scripts/install-hook.mjs`), `POST /api/openacp/daemon/{restart,stop}` (`openacp
+  stop`, or `pwsh -File scripts\{restart,stop}-openacp.ps1` for a foreground instance — the
+  script name comes from a fixed map, never from the request),
+  `POST /api/openacp/install` (`npm install -g` of the two pinned packages), and
+  `POST /api/system/screenshot/install` (`pip install mss`).
 - `AGENT_DECK_OPENACP_SETTINGS_PATH` points at a file that **contains the Discord bot token**.
   The API exposes only its `channelBindings` key. Backups written to
   `AGENT_DECK_OPENACP_SETTINGS_BACKUP_DIR` are full copies of that file — they default to
@@ -461,9 +491,11 @@ frontend/   Next.js dashboard (app/, components/, lib/, types/)
 cli/        agent-report package + tests
 templates/  CLAUDE_REPORTING.md, AGENTS_REPORTING.md
 scripts/    setup.ps1, start-backend.ps1, start-frontend.ps1, start-all.ps1, stop-all.ps1,
-            restart-openacp.ps1, install-agent-report.ps1, heartbeat.ps1,
+            restart-openacp.ps1, stop-openacp.ps1, install-agent-report.ps1, heartbeat.ps1,
             heartbeat-silent.vbs, cleanup-openacp-tunnels.ps1, make-distributable.ps1,
             lib.ps1 (helpers shared by the scripts above)
-agent-deck.bat             The only double-click entry point: start | stop | install
+agent-deck.bat             Launcher: start | stop | install (menu when double-clicked)
+start-agent-deck.bat       Double-click shortcut for "agent-deck.bat start"
+stop-agent-deck.bat        Double-click shortcut for "agent-deck.bat stop"
 openacp-channel-bindings/  Discord channel -> project bindings for the OpenACP adapter (TS + vitest)
 ```

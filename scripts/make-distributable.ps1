@@ -71,15 +71,15 @@ if (-not (Test-Path (Join-Path $stage ".env.example"))) {
 $startHere = @"
 Agent Deck - quick start (Windows 11)
 
-Everything runs from one file: agent-deck.bat
+Everything runs from the .bat files in this folder.
 
-1. Double-click it and choose [3] Install.
+1. Double-click agent-deck.bat and choose [3] Install.
    Installs Python, Node and PowerShell 7 if missing, then sets everything up
    (Python venv, npm packages, a fresh .env). Needs an internet connection.
 
-2. Double-click it again and choose [1] Start.
+2. Double-click start-agent-deck.bat.
    The dashboard opens at http://localhost:3000
-   ([2] Stop shuts everything down again.)
+   (stop-agent-deck.bat shuts everything down again.)
 
 3. In the dashboard open the "OpenACP" page and click "Install OpenACP".
    Then set up your OWN Discord bot token and workspace - see README.md
