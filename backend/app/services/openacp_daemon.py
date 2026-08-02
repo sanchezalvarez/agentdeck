@@ -349,18 +349,32 @@ def cancel_session(session_id: str, timeout: int) -> SessionActionResult:
     return SessionActionResult(ok=bool(data.get("cancelled")), session_id=session_id)
 
 
-def _workspace_dir(timeout: int) -> str | None:
+def _default_workspace_dir() -> str:
+    """Falls back to the conventional workspace location, creating it if needed.
+
+    "openacp status" has nothing to report on a genuinely fresh PC — there is no
+    .openacp/ yet — so without this, restart/start would run with an
+    unspecified cwd instead of the workspace OpenACP is supposed to initialize
+    itself into. Mirrors the same default and creation scripts/start-openacp.ps1
+    uses.
+    """
+    default = Path.home() / "openacp-workspace"
+    default.mkdir(parents=True, exist_ok=True)
+    return str(default)
+
+
+def _workspace_dir(timeout: int) -> str:
     """The daemon must be driven from its workspace so it resolves the existing
     .openacp folder instead of creating a new one."""
     try:
         result = _run(["status", "--json"], timeout)
         payload = json.loads(result.stdout)
     except (FileNotFoundError, subprocess.TimeoutExpired, json.JSONDecodeError):
-        return None
+        return _default_workspace_dir()
 
     directory = (payload.get("data") or {}).get("dir")
     if not directory:
-        return None
+        return _default_workspace_dir()
     return str(Path(directory).parent)
 
 

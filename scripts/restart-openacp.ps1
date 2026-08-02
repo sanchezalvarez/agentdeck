@@ -23,15 +23,26 @@ try {
     $status = $null
 }
 
-if ($null -eq $status -or -not $status.success) {
-    Write-Error "Could not read OpenACP status."
-}
+# "openacp status" fails this way when .openacp/ has never been created —
+# e.g. a genuinely fresh PC, or one where only the npm packages were
+# installed. Fall back to the conventional workspace instead of aborting, the
+# same way start-openacp.ps1 does.
+$apiPort = 21420
+if ($status -and $status.success -and $status.data.apiPort) { $apiPort = [int]$status.data.apiPort }
 
-$apiPort = if ($status.data.apiPort) { [int]$status.data.apiPort } else { 21420 }
-# Foreground instances write no pid file — "openacp status" reports offline
-# even while one is running, so check the API port as well.
-$isRunning = ($status.data.status -ne "offline") -or (Test-Listening $apiPort)
-$workspace = Split-Path $status.data.dir -Parent
+if ($status -and $status.success -and $status.data.dir) {
+    # Foreground instances write no pid file — "openacp status" reports offline
+    # even while one is running, so check the API port as well.
+    $isRunning = ($status.data.status -ne "offline") -or (Test-Listening $apiPort)
+    $workspace = Split-Path $status.data.dir -Parent
+} else {
+    $isRunning = Test-Listening $apiPort
+    $workspace = Join-Path $HOME "openacp-workspace"
+    if (-not (Test-Path $workspace)) {
+        New-Item -ItemType Directory -Path $workspace | Out-Null
+        Write-Host "[fix]   created OpenACP workspace folder: $workspace" -ForegroundColor Cyan
+    }
+}
 
 if ($isRunning -and -not $Force) {
     Write-Host "OpenACP is running (status: $($status.data.status), pid: $($status.data.pid))." -ForegroundColor Yellow

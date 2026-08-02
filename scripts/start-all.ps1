@@ -73,7 +73,20 @@ if (-not $openacp) {
     if ($status -and $status.success -and $status.data.apiPort) { $openacpPort = [int]$status.data.apiPort }
 
     if ($null -eq $status -or -not $status.success) {
-        Write-Host "[warn]  Could not read OpenACP status — start it yourself" -ForegroundColor Yellow
+        # "openacp status" fails this way on a genuinely fresh PC too: with no
+        # ~/openacp-workspace yet, there is nothing for it to report on. That
+        # used to just print a warning and stop here, silently skipping the
+        # only thing that would actually fix it — start-openacp.ps1 now
+        # creates the workspace itself, so attempt the same start a human
+        # would do by hand next instead of leaving OpenACP off.
+        if (Test-Listening $openacpPort) {
+            Write-Host "[skip]  OpenACP already running in foreground (port $openacpPort)" -ForegroundColor Yellow
+        } else {
+            Write-Host "[start] OpenACP in its own window (status unavailable - likely first run on this PC)" -ForegroundColor Green
+            if (-not $DryRun) {
+                Start-Process pwsh -ArgumentList "-NoExit", "-File", (Join-Path $root "scripts\start-openacp.ps1")
+            }
+        }
     } elseif ($status.data.status -ne "offline") {
         Write-Host "[skip]  OpenACP already running (status: $($status.data.status), pid: $($status.data.pid))" -ForegroundColor Yellow
     } elseif (Test-Listening $openacpPort) {
