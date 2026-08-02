@@ -22,6 +22,7 @@ import type {
   ChannelBindingsResponse,
   DaemonActionResult,
   DaemonStatus,
+  DoctorResult,
   HookStatus,
   OpenAcpAgent,
   OpenAcpAgentInstallResult,
@@ -95,6 +96,8 @@ export default function OpenAcpPage() {
   const [installOutput, setInstallOutput] = useState<string | null>(null);
   const [agentInstallBusy, setAgentInstallBusy] = useState<string | null>(null);
   const [agentInstallOutput, setAgentInstallOutput] = useState<string | null>(null);
+  const [doctor, setDoctor] = useState<DoctorResult | null>(null);
+  const [doctorBusy, setDoctorBusy] = useState(false);
   const [transfer, setTransfer] = useState<SettingsTransferStatus | null>(null);
   const [transferBusy, setTransferBusy] = useState<"export" | "import" | null>(null);
   const [transferMsg, setTransferMsg] = useState<string | null>(null);
@@ -258,6 +261,18 @@ export default function OpenAcpPage() {
     }
   };
 
+  const runDoctor = async () => {
+    setDoctorBusy(true);
+    setFormError(null);
+    try {
+      setDoctor(await apiGet<DoctorResult>("/api/openacp/doctor"));
+    } catch (err) {
+      setFormError(err instanceof Error ? err.message : "Doctor check failed");
+    } finally {
+      setDoctorBusy(false);
+    }
+  };
+
   const runTransfer = async (action: "export" | "import") => {
     setTransferBusy(action);
     setFormError(null);
@@ -353,6 +368,20 @@ export default function OpenAcpPage() {
     return <Badge className="tag-riso-muted">unknown</Badge>;
   };
 
+  const checkColor = (status: string) => {
+    if (status === "pass") return "text-[color:var(--accent-teal)]";
+    if (status === "warn") return "text-[color:var(--accent-gold)]";
+    if (status === "fail") return "text-[color:var(--destructive)]";
+    return "text-[color:var(--muted-foreground)]";
+  };
+
+  const checkIcon = (status: string) => {
+    if (status === "pass") return "✓";
+    if (status === "warn") return "⚠";
+    if (status === "fail") return "✗";
+    return "•";
+  };
+
   return (
     <div className="space-y-4">
       <div className="flex items-center justify-between">
@@ -369,6 +398,55 @@ export default function OpenAcpPage() {
         <strong> OpenACP must be restarted manually</strong> for them to take effect — Agent Deck
         never starts or stops it.
       </p>
+
+      <Card>
+        <CardHeader className="flex-row items-center justify-between">
+          <CardTitle>OpenACP doctor</CardTitle>
+          {doctor && (
+            <Badge
+              className={
+                doctor.ok && doctor.failed === 0
+                  ? "tag-riso-teal"
+                  : doctor.ok && doctor.warnings > 0
+                    ? "tag-riso-gold"
+                    : "tag-riso-destructive"
+              }
+            >
+              {doctor.ok
+                ? `${doctor.passed} passed, ${doctor.warnings} warnings, ${doctor.failed} failed`
+                : "unavailable"}
+            </Badge>
+          )}
+        </CardHeader>
+        <CardContent className="space-y-3 text-sm">
+          <p className="text-xs text-[color:var(--muted-foreground)]">
+            Runs <span className="font-mono">openacp doctor</span> — its own health check across
+            config, agents, storage, workspace, plugins, daemon and tunnel.
+          </p>
+          <Button variant="outline" size="sm" disabled={doctorBusy} onClick={runDoctor}>
+            {doctorBusy ? "Running…" : "Run doctor"}
+          </Button>
+          {doctor && !doctor.ok && (
+            <p className="text-sm text-[color:var(--destructive)]">{doctor.detail}</p>
+          )}
+          {doctor?.ok && (
+            <div className="space-y-2">
+              {doctor.categories.map((category) => (
+                <div key={category.name}>
+                  <p className="text-xs font-medium text-[color:var(--muted-foreground)]">{category.name}</p>
+                  <ul className="space-y-0.5">
+                    {category.results.map((check, i) => (
+                      <li key={i} className={`font-mono text-xs ${checkColor(check.status)}`}>
+                        {checkIcon(check.status)} {check.message}
+                      </li>
+                    ))}
+                  </ul>
+                </div>
+              ))}
+            </div>
+          )}
+        </CardContent>
+      </Card>
 
       <Card>
         <CardHeader className="flex-row items-center justify-between">

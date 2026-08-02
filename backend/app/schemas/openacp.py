@@ -17,6 +17,9 @@ __all__ = [
     "ChannelBindingWrite",
     "ChannelBindingsRead",
     "ChannelBindingsUpdate",
+    "DoctorCategory",
+    "DoctorCheck",
+    "DoctorResult",
     "HookStatusRead",
     "InstallResult",
     "InstallStatusRead",
@@ -129,6 +132,31 @@ class ChannelBindingsRead(BaseModel):
 class AgentRead(BaseModel):
     id: str
     name: str
+
+
+class DoctorCheck(BaseModel):
+    # "pass" | "warn" | "fail", as reported by "openacp doctor --json" —
+    # passed through verbatim rather than constrained, so a wording change on
+    # OpenACP's side degrades to an unstyled row instead of a validation error.
+    status: str
+    message: str
+
+
+class DoctorCategory(BaseModel):
+    name: str
+    results: list[DoctorCheck]
+
+
+class DoctorResult(BaseModel):
+    # False when the CLI itself could not be reached or its output could not
+    # be read — distinct from a real check failing, which still leaves ok=True
+    # with a non-zero "failed" count.
+    ok: bool
+    categories: list[DoctorCategory] = []
+    passed: int = 0
+    warnings: int = 0
+    failed: int = 0
+    detail: str = ""
 
 
 class AgentInstallResult(BaseModel):

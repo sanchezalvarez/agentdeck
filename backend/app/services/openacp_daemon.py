@@ -27,6 +27,9 @@ from ..schemas.openacp import (
     AgentInstallResult,
     DaemonActionResult,
     DaemonStatusRead,
+    DoctorCategory,
+    DoctorCheck,
+    DoctorResult,
     OpenAcpSessionRead,
     SessionActionResult,
 )
@@ -268,6 +271,61 @@ def read_sessions(timeout: int) -> list[OpenAcpSessionRead]:
     ]
     sessions.sort(key=lambda s: s.last_active_at, reverse=True)
     return sessions
+
+
+def run_doctor(timeout: int) -> DoctorResult:
+    """Runs "openacp doctor --json" — the CLI's own health check across
+    config, agents, storage, workspace, plugins, daemon and tunnel.
+
+    Never raises: an unreachable CLI, a timeout or unreadable output all
+    report ok=False with a detail message, the same way read_status() treats
+    a missing CLI as "unknown" rather than an error. This is a read-only
+    diagnostic — no lock, no write.
+    """
+    if not _cli_path():
+        return DoctorResult(ok=False, detail="openacp was not found on the backend's PATH")
+
+    cwd = _workspace_dir(timeout)
+
+    try:
+        result = _run(["doctor", "--json"], timeout, cwd=cwd)
+    except FileNotFoundError:
+        return DoctorResult(ok=False, detail="openacp was not found on the backend's PATH")
+    except subprocess.TimeoutExpired:
+        return DoctorResult(ok=False, detail="openacp doctor timed out")
+
+    try:
+        payload = json.loads(result.stdout)
+    except json.JSONDecodeError:
+        return DoctorResult(
+            ok=False, detail=_truncate(result.stderr) or "could not read openacp doctor output"
+        )
+
+    if not payload.get("success"):
+        return DoctorResult(ok=False, detail="openacp reported a failure")
+
+    data = payload.get("data") or {}
+    categories = [
+        DoctorCategory(
+            name=str(category.get("name") or ""),
+            results=[
+                DoctorCheck(status=str(check.get("status") or "unknown"), message=str(check.get("message") or ""))
+                for check in (category.get("results") or [])
+                if isinstance(check, dict)
+            ],
+        )
+        for category in (data.get("categories") or [])
+        if isinstance(category, dict)
+    ]
+    summary = data.get("summary") or {}
+
+    return DoctorResult(
+        ok=True,
+        categories=categories,
+        passed=int(summary.get("passed") or 0),
+        warnings=int(summary.get("warnings") or 0),
+        failed=int(summary.get("failed") or 0),
+    )
 
 
 def read_status(timeout: int, sessions_path: str) -> DaemonStatusRead:

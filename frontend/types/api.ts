@@ -210,6 +210,25 @@ export interface OpenAcpAgentInstallResult {
   output: string;
 }
 
+export interface DoctorCheck {
+  status: string;
+  message: string;
+}
+
+export interface DoctorCategory {
+  name: string;
+  results: DoctorCheck[];
+}
+
+export interface DoctorResult {
+  ok: boolean;
+  categories: DoctorCategory[];
+  passed: number;
+  warnings: number;
+  failed: number;
+  detail: string;
+}
+
 export interface HookStatus {
   installed: boolean | null;
   detail: string;

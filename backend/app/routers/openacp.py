@@ -12,6 +12,7 @@ from ..schemas.openacp import (
     ChannelBindingsUpdate,
     DaemonActionResult,
     DaemonStatusRead,
+    DoctorResult,
     HookStatusRead,
     InstallResult,
     InstallStatusRead,
@@ -214,6 +215,17 @@ async def get_daemon_status() -> DaemonStatusRead:
         openacp_daemon.read_status,
         settings.openacp_hook_timeout_seconds,
         settings.openacp_sessions_path,
+    )
+
+
+@router.get("/doctor", response_model=DoctorResult)
+async def get_doctor() -> DoctorResult:
+    """Runs "openacp doctor" — its own health check across config, agents,
+    storage, workspace, plugins, daemon and tunnel. Read-only, so no auth."""
+    settings = get_settings()
+    return await to_thread.run_sync(
+        openacp_daemon.run_doctor,
+        settings.openacp_hook_timeout_seconds,
     )
 
 

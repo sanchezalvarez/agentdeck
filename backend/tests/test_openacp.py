@@ -875,6 +875,67 @@ def test_daemon_status_handles_timeout(client, openacp_env, fake_daemon):
     assert "timed out" in body["detail"]
 
 
+# --- doctor ------------------------------------------------------------------
+
+DOCTOR_JSON = json.dumps(
+    {
+        "success": True,
+        "data": {
+            "categories": [
+                {"name": "Config", "results": [{"status": "pass", "message": "Config file exists"}]},
+                {
+                    "name": "Agents",
+                    "results": [
+                        {"status": "fail", "message": "npx not found in PATH (default agent!)"},
+                        {"status": "warn", "message": "npx not found in PATH"},
+                    ],
+                },
+            ],
+            "summary": {"passed": 1, "warnings": 1, "failed": 1},
+        },
+    }
+)
+
+
+def test_doctor(client, openacp_env, fake_daemon):
+    fake_daemon(
+        FakeCompleted(0, stdout=ONLINE_STATUS),  # workspace lookup
+        FakeCompleted(0, stdout=DOCTOR_JSON),
+    )
+    body = client.get("/api/openacp/doctor").json()
+
+    assert body["ok"] is True
+    assert body["passed"] == 1
+    assert body["warnings"] == 1
+    assert body["failed"] == 1
+    assert body["categories"][1]["name"] == "Agents"
+    assert body["categories"][1]["results"][0]["status"] == "fail"
+    assert "npx not found" in body["categories"][1]["results"][0]["message"]
+
+
+def test_doctor_missing_cli_is_not_an_error(client, openacp_env, monkeypatch):
+    monkeypatch.setattr(openacp_daemon.shutil, "which", lambda _: None)
+    body = client.get("/api/openacp/doctor").json()
+    assert body["ok"] is False
+    assert "not found on the backend's PATH" in body["detail"]
+
+
+def test_doctor_handles_timeout(client, openacp_env, fake_daemon):
+    fake_daemon(
+        FakeCompleted(0, stdout=ONLINE_STATUS),
+        subprocess.TimeoutExpired(cmd="openacp", timeout=1),
+    )
+    body = client.get("/api/openacp/doctor").json()
+    assert body["ok"] is False
+    assert "timed out" in body["detail"]
+
+
+def test_doctor_requires_no_write_token(client, openacp_env, fake_daemon):
+    """Read-only diagnostic — no auth needed, unlike the mutating daemon actions."""
+    fake_daemon(FakeCompleted(0, stdout=ONLINE_STATUS), FakeCompleted(0, stdout=DOCTOR_JSON))
+    assert client.get("/api/openacp/doctor").status_code == 200
+
+
 def test_daemon_restart(client, auth, openacp_env, fake_daemon, fake_spawn, no_sleep):
     calls = fake_daemon(
         FakeCompleted(0, stdout=ONLINE_STATUS),   # foreground check
