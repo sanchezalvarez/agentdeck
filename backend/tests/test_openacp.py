@@ -441,6 +441,47 @@ def test_install_agent_detects_failure_despite_exit_code_0(client, auth, openacp
     assert body["ok"] is False
 
 
+def test_install_agent_retries_with_force_when_already_installed(
+    client, auth, openacp_env, fake_daemon
+):
+    """openacp can think an agent is already installed (some global/npm-level
+    check) while this workspace's own agents.json was never written — e.g. a
+    workspace restored from another PC's settings bundle. --force should make
+    the CLI (re)write the workspace record instead of leaving it missing."""
+    calls = fake_daemon(
+        FakeCompleted(0, stdout=ONLINE_STATUS),  # workspace lookup
+        FakeCompleted(
+            1,
+            stdout=(
+                '{"success":false,"error":{"code":"INSTALL_FAILED",'
+                '"message":"Claude Agent is already installed (v0.63.0). '
+                'Use --force to reinstall."}}'
+            ),
+        ),
+        FakeCompleted(0, stdout='{"success":true}'),  # --force retry
+    )
+    response = client.post("/api/openacp/agents/claude/install", headers=auth)
+
+    assert response.status_code == 200
+    body = response.json()
+    assert body["ok"] is True
+    assert calls[2]["argv"][1:] == ["agents", "install", "claude", "--force", "--json"]
+
+
+def test_install_agent_does_not_force_retry_other_failures(client, auth, openacp_env, fake_daemon):
+    """Only the specific "already installed, use --force" failure is retried —
+    a genuine failure (network error, bad package, ...) should not be masked
+    by silently reinstalling with --force."""
+    calls = fake_daemon(
+        FakeCompleted(0, stdout=ONLINE_STATUS),
+        FakeCompleted(1, stderr="network error"),
+    )
+    body = client.post("/api/openacp/agents/claude/install", headers=auth).json()
+
+    assert body["ok"] is False
+    assert len(calls) == 2
+
+
 def test_install_agent_serializes_against_other_actions(client, auth, openacp_env, monkeypatch):
     monkeypatch.setattr(openacp_daemon.shutil, "which", lambda _: "C:\\fake\\openacp.CMD")
     # Simulate a restart/stop/install already in flight, holding the shared lock.

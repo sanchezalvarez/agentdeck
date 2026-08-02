@@ -365,6 +365,38 @@ def cancel_session(session_id: str, timeout: int) -> SessionActionResult:
     return SessionActionResult(ok=bool(data.get("cancelled")), session_id=session_id)
 
 
+def _run_agent_install(
+    agent_id: str, cwd: str | None, timeout: int, force: bool = False
+) -> subprocess.CompletedProcess[str]:
+    args = ["agents", "install", agent_id]
+    if force:
+        args.append("--force")
+    args.append("--json")
+    return _run(args, timeout, cwd=cwd)
+
+
+def _install_outcome(result: subprocess.CompletedProcess[str]) -> tuple[bool, dict | None]:
+    """Whether an "openacp agents install --json" call actually succeeded.
+
+    A zero exit code is not the whole story: like "api cancel" (see
+    cancel_session above), the CLI can report success:true with an "error"
+    tucked into data, or plain success:false, without a matching non-zero
+    exit code.
+    """
+    ok = result.returncode == 0
+    try:
+        payload = json.loads(result.stdout) if result.stdout else None
+    except json.JSONDecodeError:
+        payload = None
+    if isinstance(payload, dict):
+        if payload.get("success") is False:
+            ok = False
+        data = payload.get("data")
+        if isinstance(data, dict) and data.get("error"):
+            ok = False
+    return ok, payload if isinstance(payload, dict) else None
+
+
 def install_agent(agent_id: str, timeout: int) -> AgentInstallResult:
     """Installs one ACP agent plugin via "openacp agents install <id>".
 
@@ -391,30 +423,36 @@ def install_agent(agent_id: str, timeout: int) -> AgentInstallResult:
         cwd = _workspace_dir(timeout)
 
         try:
-            result = _run(["agents", "install", agent_id, "--json"], timeout, cwd=cwd)
+            result = _run_agent_install(agent_id, cwd, timeout)
         except FileNotFoundError:
             raise HTTPException(status_code=503, detail="openacp was not found on the backend's PATH")
         except subprocess.TimeoutExpired:
             raise HTTPException(status_code=504, detail=f"openacp agents install {agent_id} timed out")
 
-        output = _truncate("\n".join(part for part in (result.stdout, result.stderr) if part))
-        ok = result.returncode == 0
+        ok, payload = _install_outcome(result)
 
-        # A zero exit code is not the whole story: like "api cancel" (see
-        # cancel_session above), the CLI can report success:true with an
-        # "error" tucked into data, or plain success:false, without a
-        # matching non-zero exit code.
-        if ok:
+        # openacp can consider an agent "already installed" from some
+        # global/npm-level check while this workspace's own agents.json was
+        # never written — e.g. a workspace whose settings were restored from
+        # another PC's bundle but that never itself ran an install. Plain
+        # "already installed" is not a real failure, so retry once with
+        # --force, which makes the CLI (re)write the workspace record instead
+        # of just no-op'ing.
+        error = (payload or {}).get("error") if payload else None
+        code = error.get("code") if isinstance(error, dict) else None
+        message = str(error.get("message") or "") if isinstance(error, dict) else ""
+        if not ok and code == "INSTALL_FAILED" and "already installed" in message.lower():
             try:
-                payload = json.loads(result.stdout) if result.stdout else None
-            except json.JSONDecodeError:
-                payload = None
-            if isinstance(payload, dict):
-                if payload.get("success") is False:
-                    ok = False
-                data = payload.get("data")
-                if isinstance(data, dict) and data.get("error"):
-                    ok = False
+                result = _run_agent_install(agent_id, cwd, timeout, force=True)
+            except FileNotFoundError:
+                raise HTTPException(status_code=503, detail="openacp was not found on the backend's PATH")
+            except subprocess.TimeoutExpired:
+                raise HTTPException(
+                    status_code=504, detail=f"openacp agents install {agent_id} --force timed out"
+                )
+            ok, payload = _install_outcome(result)
+
+        output = _truncate("\n".join(part for part in (result.stdout, result.stderr) if part))
 
         return AgentInstallResult(
             ok=ok,
