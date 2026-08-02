@@ -404,26 +404,22 @@ def test_get_agent_catalog(client, openacp_env):
 
 
 def test_install_agent(client, auth, openacp_env, fake_daemon):
-    calls = fake_daemon(
-        FakeCompleted(0, stdout=ONLINE_STATUS),  # workspace lookup
-        FakeCompleted(0, stdout='{"success":true}'),
-    )
+    calls = fake_daemon(FakeCompleted(0, stdout='{"success":true}'))
     response = client.post("/api/openacp/agents/gemini/install", headers=auth)
 
     assert response.status_code == 200
     body = response.json()
     assert body["ok"] is True
     assert body["agent_id"] == "gemini"
-    assert calls[1]["argv"][1:] == ["agents", "install", "gemini", "--json"]
-    # Driven from the workspace, same as every other openacp command here.
-    assert calls[1]["kwargs"]["cwd"] == "C:\\ws"
+    assert calls[0]["argv"][1:] == ["agents", "install", "gemini", "--json"]
+    # Driven from the fixed workspace default, never the backend's own ambient
+    # cwd — that used to let "openacp status" bootstrap a bogus workspace
+    # wherever the backend process happened to be running from.
+    assert calls[0]["kwargs"]["cwd"] == str(Path.home() / "openacp-workspace")
 
 
 def test_install_agent_reports_failure(client, auth, openacp_env, fake_daemon):
-    fake_daemon(
-        FakeCompleted(0, stdout=ONLINE_STATUS),
-        FakeCompleted(1, stderr="network error"),
-    )
+    fake_daemon(FakeCompleted(1, stderr="network error"))
     body = client.post("/api/openacp/agents/kimi/install", headers=auth).json()
 
     assert body["ok"] is False
@@ -433,10 +429,7 @@ def test_install_agent_reports_failure(client, auth, openacp_env, fake_daemon):
 def test_install_agent_detects_failure_despite_exit_code_0(client, auth, openacp_env, fake_daemon):
     """Mirrors cancel_session: the CLI can exit 0 while its own --json body
     reports the failure (success:false, or success:true with a data.error)."""
-    fake_daemon(
-        FakeCompleted(0, stdout=ONLINE_STATUS),
-        FakeCompleted(0, stdout='{"success":false,"error":{"message":"network error"}}'),
-    )
+    fake_daemon(FakeCompleted(0, stdout='{"success":false,"error":{"message":"network error"}}'))
     body = client.post("/api/openacp/agents/kimi/install", headers=auth).json()
     assert body["ok"] is False
 
@@ -449,7 +442,6 @@ def test_install_agent_retries_with_force_when_already_installed(
     workspace restored from another PC's settings bundle. --force should make
     the CLI (re)write the workspace record instead of leaving it missing."""
     calls = fake_daemon(
-        FakeCompleted(0, stdout=ONLINE_STATUS),  # workspace lookup
         FakeCompleted(
             1,
             stdout=(
@@ -465,21 +457,18 @@ def test_install_agent_retries_with_force_when_already_installed(
     assert response.status_code == 200
     body = response.json()
     assert body["ok"] is True
-    assert calls[2]["argv"][1:] == ["agents", "install", "claude", "--force", "--json"]
+    assert calls[1]["argv"][1:] == ["agents", "install", "claude", "--force", "--json"]
 
 
 def test_install_agent_does_not_force_retry_other_failures(client, auth, openacp_env, fake_daemon):
     """Only the specific "already installed, use --force" failure is retried —
     a genuine failure (network error, bad package, ...) should not be masked
     by silently reinstalling with --force."""
-    calls = fake_daemon(
-        FakeCompleted(0, stdout=ONLINE_STATUS),
-        FakeCompleted(1, stderr="network error"),
-    )
+    calls = fake_daemon(FakeCompleted(1, stderr="network error"))
     body = client.post("/api/openacp/agents/claude/install", headers=auth).json()
 
     assert body["ok"] is False
-    assert len(calls) == 2
+    assert len(calls) == 1
 
 
 def test_install_agent_serializes_against_other_actions(client, auth, openacp_env, monkeypatch):
@@ -898,10 +887,7 @@ DOCTOR_JSON = json.dumps(
 
 
 def test_doctor(client, openacp_env, fake_daemon):
-    fake_daemon(
-        FakeCompleted(0, stdout=ONLINE_STATUS),  # workspace lookup
-        FakeCompleted(0, stdout=DOCTOR_JSON),
-    )
+    calls = fake_daemon(FakeCompleted(0, stdout=DOCTOR_JSON))
     body = client.get("/api/openacp/doctor").json()
 
     assert body["ok"] is True
@@ -911,6 +897,8 @@ def test_doctor(client, openacp_env, fake_daemon):
     assert body["categories"][1]["name"] == "Agents"
     assert body["categories"][1]["results"][0]["status"] == "fail"
     assert "npx not found" in body["categories"][1]["results"][0]["message"]
+    # Fixed workspace default, never the backend's own ambient cwd.
+    assert calls[0]["kwargs"]["cwd"] == str(Path.home() / "openacp-workspace")
 
 
 def test_doctor_missing_cli_is_not_an_error(client, openacp_env, monkeypatch):
@@ -921,10 +909,7 @@ def test_doctor_missing_cli_is_not_an_error(client, openacp_env, monkeypatch):
 
 
 def test_doctor_handles_timeout(client, openacp_env, fake_daemon):
-    fake_daemon(
-        FakeCompleted(0, stdout=ONLINE_STATUS),
-        subprocess.TimeoutExpired(cmd="openacp", timeout=1),
-    )
+    fake_daemon(subprocess.TimeoutExpired(cmd="openacp", timeout=1))
     body = client.get("/api/openacp/doctor").json()
     assert body["ok"] is False
     assert "timed out" in body["detail"]
@@ -932,14 +917,13 @@ def test_doctor_handles_timeout(client, openacp_env, fake_daemon):
 
 def test_doctor_requires_no_write_token(client, openacp_env, fake_daemon):
     """Read-only diagnostic — no auth needed, unlike the mutating daemon actions."""
-    fake_daemon(FakeCompleted(0, stdout=ONLINE_STATUS), FakeCompleted(0, stdout=DOCTOR_JSON))
+    fake_daemon(FakeCompleted(0, stdout=DOCTOR_JSON))
     assert client.get("/api/openacp/doctor").status_code == 200
 
 
 def test_daemon_restart(client, auth, openacp_env, fake_daemon, fake_spawn, no_sleep):
     calls = fake_daemon(
         FakeCompleted(0, stdout=ONLINE_STATUS),   # foreground check
-        FakeCompleted(0, stdout=ONLINE_STATUS),   # workspace lookup
         FakeCompleted(0, stdout="OpenACP stopped"),
         FakeCompleted(0, stdout=ONLINE_STATUS),   # status afterwards
     )
@@ -954,13 +938,15 @@ def test_daemon_restart(client, auth, openacp_env, fake_daemon, fake_spawn, no_s
 
     # Restart is stop + a fresh process, never "openacp restart": that one runs
     # inside the calling shell and would block the request.
-    assert calls[2]["argv"][1:] == ["stop"]
+    assert calls[1]["argv"][1:] == ["stop"]
+    # Fixed workspace default, never the backend's own ambient cwd.
+    assert calls[1]["kwargs"]["cwd"] == str(Path.home() / "openacp-workspace")
     assert len(spawned) == 1
     # "start" would daemonize regardless of runMode — the window would just
     # print a PID and close.
     assert spawned[0]["argv"][1:] == ["--foreground"]
     # OpenACP is driven from its workspace, not from the backend's cwd.
-    assert spawned[0]["kwargs"]["cwd"] == "C:\\ws"
+    assert spawned[0]["kwargs"]["cwd"] == str(Path.home() / "openacp-workspace")
     assert spawned[0]["kwargs"]["shell"] is False
     # Its own visible console — otherwise it would have nowhere to log and
     # would die with the backend process.
@@ -972,7 +958,6 @@ def test_daemon_restart_reports_failure_to_come_up(
 ):
     fake_daemon(
         FakeCompleted(0, stdout=ONLINE_STATUS),   # foreground check
-        FakeCompleted(0, stdout=ONLINE_STATUS),   # workspace lookup
         FakeCompleted(0, stdout="OpenACP stopped"),
         FakeCompleted(0, stdout=OFFLINE_STATUS),  # never comes back
     )
@@ -997,7 +982,6 @@ def test_daemon_restart_without_cli_does_not_spawn(client, auth, openacp_env, mo
 def test_daemon_stop(client, auth, openacp_env, fake_daemon):
     calls = fake_daemon(
         FakeCompleted(0, stdout=ONLINE_STATUS),   # foreground check
-        FakeCompleted(0, stdout=ONLINE_STATUS),   # workspace lookup
         FakeCompleted(0, stdout="OpenACP daemon stopped"),
         FakeCompleted(0, stdout=OFFLINE_STATUS),
     )
@@ -1006,7 +990,7 @@ def test_daemon_stop(client, auth, openacp_env, fake_daemon):
     assert body["ok"] is True
     assert body["action"] == "stop"
     assert body["status"]["running"] is False
-    assert calls[2]["argv"][1] == "stop"
+    assert calls[1]["argv"][1] == "stop"
 
 
 def test_daemon_restart_requires_write_token(client, openacp_env):
@@ -1020,7 +1004,6 @@ def test_daemon_stop_requires_write_token(client, openacp_env):
 def test_daemon_action_reports_failure(client, auth, openacp_env, fake_daemon):
     fake_daemon(
         FakeCompleted(0, stdout=ONLINE_STATUS),   # foreground check
-        FakeCompleted(0, stdout=ONLINE_STATUS),   # workspace lookup
         FakeCompleted(1, stderr="daemon refused to stop"),
         FakeCompleted(0, stdout=ONLINE_STATUS),
     )

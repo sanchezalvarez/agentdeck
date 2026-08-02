@@ -229,7 +229,7 @@ def _probe_api(timeout: int) -> list | None:
     None when nothing answers.
     """
     try:
-        result = _run(["api", "status", "--json"], timeout)
+        result = _run(["api", "status", "--json"], timeout, cwd=_default_workspace_dir())
         payload = json.loads(result.stdout)
     except (FileNotFoundError, subprocess.TimeoutExpired, json.JSONDecodeError):
         return None
@@ -285,7 +285,7 @@ def run_doctor(timeout: int) -> DoctorResult:
     if not _cli_path():
         return DoctorResult(ok=False, detail="openacp was not found on the backend's PATH")
 
-    cwd = _workspace_dir(timeout)
+    cwd = _default_workspace_dir()
 
     try:
         result = _run(["doctor", "--json"], timeout, cwd=cwd)
@@ -336,7 +336,7 @@ def read_status(timeout: int, sessions_path: str) -> DaemonStatusRead:
         return unknown.model_copy(update={"detail": "openacp was not found on the backend's PATH"})
 
     try:
-        result = _run(["status", "--json"], timeout)
+        result = _run(["status", "--json"], timeout, cwd=_default_workspace_dir())
     except FileNotFoundError:
         return unknown.model_copy(update={"detail": "openacp was not found on the backend's PATH"})
     except subprocess.TimeoutExpired:
@@ -397,7 +397,7 @@ def cancel_session(session_id: str, timeout: int) -> SessionActionResult:
         raise HTTPException(status_code=422, detail="Invalid session id")
 
     try:
-        result = _run(["api", "cancel", session_id, "--json"], timeout)
+        result = _run(["api", "cancel", session_id, "--json"], timeout, cwd=_default_workspace_dir())
     except FileNotFoundError:
         raise HTTPException(status_code=503, detail="openacp was not found on the backend's PATH")
     except subprocess.TimeoutExpired:
@@ -478,7 +478,7 @@ def install_agent(agent_id: str, timeout: int) -> AgentInstallResult:
         raise HTTPException(status_code=409, detail="Another OpenACP action is already running")
 
     try:
-        cwd = _workspace_dir(timeout)
+        cwd = _default_workspace_dir()
 
         try:
             result = _run_agent_install(agent_id, cwd, timeout)
@@ -522,32 +522,21 @@ def install_agent(agent_id: str, timeout: int) -> AgentInstallResult:
 
 
 def _default_workspace_dir() -> str:
-    """Falls back to the conventional workspace location, creating it if needed.
+    """The one true OpenACP workspace, created if this is the first OpenACP
+    action on this PC. Every "openacp" call in this module is driven from
+    here explicitly — never from the backend process's own ambient cwd.
 
-    "openacp status" has nothing to report on a genuinely fresh PC — there is no
-    .openacp/ yet — so without this, restart/start would run with an
-    unspecified cwd instead of the workspace OpenACP is supposed to initialize
-    itself into. Mirrors the same default and creation scripts/start-openacp.ps1
-    uses.
+    "openacp status" happily reports (and will silently initialize) a
+    workspace wherever it is invoked from, so leaving cwd unset previously let
+    it bootstrap a bogus, disconnected .openacp/ nested inside wherever the
+    backend process's cwd happened to be (e.g. its own repo checkout) instead
+    of the conventional ~/openacp-workspace every other part of this codebase
+    (config.py, scripts/start-openacp.ps1) assumes. Mirrors the same default
+    and creation those use.
     """
     default = Path.home() / "openacp-workspace"
     default.mkdir(parents=True, exist_ok=True)
     return str(default)
-
-
-def _workspace_dir(timeout: int) -> str:
-    """The daemon must be driven from its workspace so it resolves the existing
-    .openacp folder instead of creating a new one."""
-    try:
-        result = _run(["status", "--json"], timeout)
-        payload = json.loads(result.stdout)
-    except (FileNotFoundError, subprocess.TimeoutExpired, json.JSONDecodeError):
-        return _default_workspace_dir()
-
-    directory = (payload.get("data") or {}).get("dir")
-    if not directory:
-        return _default_workspace_dir()
-    return str(Path(directory).parent)
 
 
 def run_action(
@@ -570,7 +559,7 @@ def run_action(
         if current.foreground:
             return _run_foreground_script(action, scripts_dir, script_timeout, sessions_path)
 
-        cwd = _workspace_dir(timeout)
+        cwd = _default_workspace_dir()
 
         # Both actions stop first; "openacp restart" is deliberately unused,
         # because it honours runMode=foreground and would block this request.

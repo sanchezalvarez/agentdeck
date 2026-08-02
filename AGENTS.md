@@ -382,6 +382,18 @@ Three things to know:
 - **The OpenACP doctor card** (`GET /api/openacp/doctor`) runs `openacp doctor --json` and shows
   every category (config, agents, storage, workspace, plugins, daemon, tunnel) right in the
   dashboard — the fastest way to see *why* something is broken instead of guessing from a 503.
+- **Every `openacp` call the backend makes is pinned to `cwd=~/openacp-workspace`
+  (`openacp_daemon._default_workspace_dir()`).** `openacp status` happily reports — and will
+  silently *initialize* — a workspace wherever it is invoked from. A call made without an
+  explicit `cwd` previously let it bootstrap a bogus, disconnected `.openacp/` folder nested
+  inside wherever the backend process's own working directory happened to be (its own repo
+  checkout, in one observed case), which then made `openacp doctor`, agent installs, sessions and
+  daemon status all reason about the wrong workspace with no error at all — the real
+  `~/openacp-workspace/.openacp` stayed untouched and correctly configured the whole time. If
+  `openacp doctor`'s **Workspace** category ever reports a directory inside this repo instead of
+  `~/openacp-workspace`, a stray `.openacp/` was created by an old version of this bug (or by
+  running `openacp` manually from inside the repo) — delete that stray folder by hand; the fixed
+  code will never recreate it there.
 
 Writes are guarded: the workspace directory must exist, channel IDs must be Discord snowflakes,
 the file is written atomically with a timestamped backup, and a revision check rejects the save
