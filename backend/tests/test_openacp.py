@@ -397,6 +397,12 @@ def test_get_agents_missing_file(client, openacp_env):
     assert client.get("/api/openacp/agents").json() == []
 
 
+def test_get_agent_catalog(client, openacp_env):
+    body = client.get("/api/openacp/agents/catalog").json()
+    ids = {entry["id"] for entry in body}
+    assert ids == set(openacp_daemon.AGENT_CATALOG)
+
+
 def test_install_agent(client, auth, openacp_env, fake_daemon):
     calls = fake_daemon(
         FakeCompleted(0, stdout=ONLINE_STATUS),  # workspace lookup
@@ -422,6 +428,28 @@ def test_install_agent_reports_failure(client, auth, openacp_env, fake_daemon):
 
     assert body["ok"] is False
     assert "network error" in body["output"]
+
+
+def test_install_agent_detects_failure_despite_exit_code_0(client, auth, openacp_env, fake_daemon):
+    """Mirrors cancel_session: the CLI can exit 0 while its own --json body
+    reports the failure (success:false, or success:true with a data.error)."""
+    fake_daemon(
+        FakeCompleted(0, stdout=ONLINE_STATUS),
+        FakeCompleted(0, stdout='{"success":false,"error":{"message":"network error"}}'),
+    )
+    body = client.post("/api/openacp/agents/kimi/install", headers=auth).json()
+    assert body["ok"] is False
+
+
+def test_install_agent_serializes_against_other_actions(client, auth, openacp_env, monkeypatch):
+    monkeypatch.setattr(openacp_daemon.shutil, "which", lambda _: "C:\\fake\\openacp.CMD")
+    # Simulate a restart/stop/install already in flight, holding the shared lock.
+    openacp_daemon._action_lock.acquire()
+    try:
+        response = client.post("/api/openacp/agents/claude/install", headers=auth)
+        assert response.status_code == 409
+    finally:
+        openacp_daemon._action_lock.release()
 
 
 def test_install_agent_rejects_unknown_id(client, auth, openacp_env, fake_daemon):

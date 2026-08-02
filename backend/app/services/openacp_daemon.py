@@ -373,6 +373,10 @@ def install_agent(agent_id: str, timeout: int) -> AgentInstallResult:
     string. Runs from the workspace directory (creating it if this is the
     first OpenACP action on this PC) for the same reason every other command
     here does.
+
+    Shares _action_lock with restart/stop: it writes into the same workspace
+    (agents.json) that a concurrent restart reads from and a concurrent
+    install would collide with.
     """
     if agent_id not in AGENT_CATALOG:
         raise HTTPException(status_code=422, detail=f"Unknown agent id: {agent_id}")
@@ -380,23 +384,45 @@ def install_agent(agent_id: str, timeout: int) -> AgentInstallResult:
     if not _cli_path():
         raise HTTPException(status_code=503, detail="openacp was not found on the backend's PATH")
 
-    cwd = _workspace_dir(timeout)
+    if not _action_lock.acquire(blocking=False):
+        raise HTTPException(status_code=409, detail="Another OpenACP action is already running")
 
     try:
-        result = _run(["agents", "install", agent_id, "--json"], timeout, cwd=cwd)
-    except FileNotFoundError:
-        raise HTTPException(status_code=503, detail="openacp was not found on the backend's PATH")
-    except subprocess.TimeoutExpired:
-        raise HTTPException(status_code=504, detail=f"openacp agents install {agent_id} timed out")
+        cwd = _workspace_dir(timeout)
 
-    output = _truncate("\n".join(part for part in (result.stdout, result.stderr) if part))
-    ok = result.returncode == 0
+        try:
+            result = _run(["agents", "install", agent_id, "--json"], timeout, cwd=cwd)
+        except FileNotFoundError:
+            raise HTTPException(status_code=503, detail="openacp was not found on the backend's PATH")
+        except subprocess.TimeoutExpired:
+            raise HTTPException(status_code=504, detail=f"openacp agents install {agent_id} timed out")
 
-    return AgentInstallResult(
-        ok=ok,
-        agent_id=agent_id,
-        output=output or (f"{agent_id} installed" if ok else f"{agent_id} install failed"),
-    )
+        output = _truncate("\n".join(part for part in (result.stdout, result.stderr) if part))
+        ok = result.returncode == 0
+
+        # A zero exit code is not the whole story: like "api cancel" (see
+        # cancel_session above), the CLI can report success:true with an
+        # "error" tucked into data, or plain success:false, without a
+        # matching non-zero exit code.
+        if ok:
+            try:
+                payload = json.loads(result.stdout) if result.stdout else None
+            except json.JSONDecodeError:
+                payload = None
+            if isinstance(payload, dict):
+                if payload.get("success") is False:
+                    ok = False
+                data = payload.get("data")
+                if isinstance(data, dict) and data.get("error"):
+                    ok = False
+
+        return AgentInstallResult(
+            ok=ok,
+            agent_id=agent_id,
+            output=output or (f"{agent_id} installed" if ok else f"{agent_id} install failed"),
+        )
+    finally:
+        _action_lock.release()
 
 
 def _default_workspace_dir() -> str:

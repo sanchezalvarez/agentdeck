@@ -81,8 +81,10 @@ Four independent pieces, all talking over HTTP — nothing shares a process or a
   unauthenticated by design. New mutating endpoints must add `WriteAuth`.
 - **Agent Deck never starts or stops Claude Code / Codex.** It *does* control the OpenACP daemon
   and the adapter's config — those are the only endpoints that spawn a subprocess
-  (`/api/openacp/{redeploy,install,daemon/restart,daemon/stop}`, `/api/system/screenshot/install`).
-  They run a fixed command with a fixed argument list, no shell, with a timeout. Keep it that way.
+  (`/api/openacp/{redeploy,install,daemon/restart,daemon/stop,agents/{id}/install}`,
+  `/api/system/screenshot/install`). They run a fixed command with a fixed argument list, no
+  shell, with a timeout. Keep it that way. `agents/{id}/install` validates `id` against
+  `openacp_daemon.AGENT_CATALOG` first — the argv is fixed only because the id is.
   A *foreground* OpenACP instance writes no pid file, so the daemon endpoints shell out to
   `scripts\{restart,stop}-openacp.ps1` for it — the script name comes from `FOREGROUND_SCRIPTS`
   in `openacp_daemon.py`, never from the request.

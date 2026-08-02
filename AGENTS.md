@@ -66,6 +66,7 @@ OpenACP-related settings (all optional): `AGENT_DECK_OPENACP_SETTINGS_PATH`,
 `AGENT_DECK_OPENACP_AGENTS_PATH`, `AGENT_DECK_OPENACP_BINDINGS_MODULE_DIR`,
 `AGENT_DECK_OPENACP_SETTINGS_BACKUP_DIR`, `AGENT_DECK_OPENACP_BACKUP_RETENTION`,
 `AGENT_DECK_OPENACP_HOOK_TIMEOUT_SECONDS`, `AGENT_DECK_OPENACP_INSTALL_TIMEOUT_SECONDS`,
+`AGENT_DECK_OPENACP_AGENT_INSTALL_TIMEOUT_SECONDS`,
 `AGENT_DECK_OPENACP_SETTINGS_EXPORT_PATH` (default `openacp-config/settings.json`).
 
 Screenshot settings: `AGENT_DECK_SCREENSHOT_DIR` (default `./screenshots`),
@@ -334,6 +335,8 @@ only edits its configuration and re-applies its hook.
 | `GET /api/openacp/channel-bindings` | Current bindings (**only** the `channelBindings` key) |
 | `PATCH /api/openacp/channel-bindings` | Replace all bindings (write token) |
 | `GET /api/openacp/agents` | Installed OpenACP agents, for the agent dropdown |
+| `GET /api/openacp/agents/catalog` | Curated agent ids the dashboard offers a one-click install for (`openacp_daemon.AGENT_CATALOG`) |
+| `POST /api/openacp/agents/{agent_id}/install` | Install one agent via `openacp agents install <id>`; `agent_id` must be in the catalog (write token) |
 | `GET /api/openacp/install-status` | Whether the OpenACP CLI + Discord adapter are installed, and the CLI version |
 | `POST /api/openacp/install` | Install `@openacp/cli` + `@openacp/discord-adapter` globally via npm (write token) |
 | `GET /api/openacp/settings/transfer-status` | Whether a settings bundle exists in the repo folder (never returns the token) |

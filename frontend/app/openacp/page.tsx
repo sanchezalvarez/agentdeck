@@ -39,19 +39,6 @@ type DaemonAction = "restart" | "stop";
 
 const SNOWFLAKE = /^\d{17,20}$/;
 
-/** Curated subset of the ACP registry (it has 28+ entries) offered as a
- * one-click install. Kept in sync with AGENT_CATALOG in
- * backend/app/services/openacp_daemon.py — anything else can still be
- * installed by hand with "openacp agents install <name>". */
-const AGENT_CATALOG: { id: string; name: string }[] = [
-  { id: "claude", name: "Claude Agent" },
-  { id: "codex", name: "Codex" },
-  { id: "gemini", name: "Gemini CLI" },
-  { id: "opencode", name: "OpenCode" },
-  { id: "kimi", name: "Kimi CLI" },
-  { id: "grok-build", name: "Grok Build" },
-];
-
 /** Sentinel for the "not one of my projects" option in the workspace dropdown. */
 const CUSTOM = "__custom__";
 
@@ -100,6 +87,7 @@ export default function OpenAcpPage() {
   const [rows, setRows] = useState<BindingRow[]>([]);
   const [original, setOriginal] = useState<ChannelBindingsResponse | null>(null);
   const [agents, setAgents] = useState<OpenAcpAgent[]>([]);
+  const [agentCatalog, setAgentCatalog] = useState<OpenAcpAgent[]>([]);
   const [projects, setProjects] = useState<Project[]>([]);
   const [hook, setHook] = useState<HookStatus | null>(null);
   const [install, setInstall] = useState<OpenAcpInstallStatus | null>(null);
@@ -149,6 +137,7 @@ export default function OpenAcpPage() {
         },
       ),
       load<OpenAcpAgent[]>("Agents", "/api/openacp/agents", setAgents),
+      load<OpenAcpAgent[]>("Agent catalog", "/api/openacp/agents/catalog", setAgentCatalog),
       load<HookStatus>("Hook status", "/api/openacp/hook-status", setHook),
       load<DaemonStatus>("OpenACP server", "/api/openacp/daemon-status", setDaemon),
       load<Project[]>("Projects", "/api/projects", setProjects),
@@ -452,7 +441,7 @@ export default function OpenAcpPage() {
             this is what fills the Agent dropdown above. Restart OpenACP afterwards to pick it up.
           </p>
           <div className="flex flex-wrap gap-2">
-            {AGENT_CATALOG.map((catalogAgent) => {
+            {agentCatalog.map((catalogAgent) => {
               const installed = agents.some((a) => a.id === catalogAgent.id);
               return (
                 <Button

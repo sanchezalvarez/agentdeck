@@ -87,6 +87,16 @@ async def list_agents() -> list[AgentRead]:
     return openacp_settings.read_agents(get_settings().openacp_agents_path)
 
 
+@router.get("/agents/catalog", response_model=list[AgentRead])
+async def get_agent_catalog() -> list[AgentRead]:
+    """The curated subset of the ACP registry the dashboard offers to install.
+
+    Single source of truth for openacp_daemon.install_agent()'s allowlist —
+    the frontend renders exactly this list instead of keeping its own copy.
+    """
+    return [AgentRead(id=agent_id, name=name) for agent_id, name in openacp_daemon.AGENT_CATALOG.items()]
+
+
 @router.post("/agents/{agent_id}/install", response_model=AgentInstallResult, dependencies=[WriteAuth])
 async def install_agent(agent_id: str) -> AgentInstallResult:
     """Installs one agent CLI from OpenACP's ACP registry (openacp_daemon.AGENT_CATALOG)."""
