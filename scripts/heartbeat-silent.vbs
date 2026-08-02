@@ -6,9 +6,12 @@
 ' no console, so starting PowerShell from here with intWindowStyle 0 keeps the
 ' run invisible. (Setting the task itself to "run whether the user is logged on
 ' or not" would also work, but that change needs administrator rights.)
-Dim shell, script
+' Resolved from this script's own location — never hardcoded — so it keeps
+' working whatever the repository folder is named or cloned into.
+Dim shell, fso, script
 Set shell = CreateObject("WScript.Shell")
-script = "C:\agent-deck\scripts\heartbeat.ps1"
+Set fso = CreateObject("Scripting.FileSystemObject")
+script = fso.GetParentFolderName(WScript.ScriptFullName) & "\heartbeat.ps1"
 
 ' 0 = hidden window, False = do not wait for it to finish.
 shell.Run "powershell.exe -NoProfile -ExecutionPolicy Bypass -File """ & script & """", 0, False

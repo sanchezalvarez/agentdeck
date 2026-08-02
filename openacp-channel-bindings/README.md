@@ -69,7 +69,7 @@ One broken entry never disables the other project channels.
 ## Setup
 
 ```powershell
-cd C:\agent-deck\openacp-channel-bindings
+cd C:\agent-hub\openacp-channel-bindings
 npm install
 npm run verify        # tsc build + vitest
 npm run install-hook  # copy compiled module into the adapter + patch adapter.js
@@ -203,6 +203,6 @@ inert behaviour when unconfigured, session-creation failure, and config validati
 ## Restoring the adapter
 
 ```powershell
-Copy-Item C:\agent-deck\openacp-channel-bindings\backup\dist-20260719\* `
+Copy-Item C:\agent-hub\openacp-channel-bindings\backup\dist-20260719\* `
   "$env:APPDATA\npm\node_modules\@openacp\discord-adapter\dist" -Recurse -Force
 ```

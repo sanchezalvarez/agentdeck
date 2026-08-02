@@ -9,7 +9,11 @@ $token = Get-EnvValue "AGENT_DECK_WRITE_TOKEN" ""
 $hubUrl = Get-EnvValue "AGENT_DECK_URL" "http://127.0.0.1:8765"
 
 $payload = @{
-    worker              = "Rembrosoft-Main-PC"
+    # Override with AGENT_DECK_WORKER_NAME in .env if $env:COMPUTERNAME isn't a
+    # good display name — e.g. to keep it stable across a PC rename. Defaulting
+    # to a fixed name here would make every PC running this script report
+    # under the same worker, colliding with each other in the dashboard.
+    worker              = Get-EnvValue "AGENT_DECK_WORKER_NAME" $env:COMPUTERNAME
     hostname            = $env:COMPUTERNAME
     operating_system    = "Windows 11"
     claude_available    = [bool](Get-Command claude -ErrorAction SilentlyContinue)

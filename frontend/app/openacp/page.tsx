@@ -556,7 +556,7 @@ export default function OpenAcpPage() {
         <CardContent className="space-y-3 text-sm">
           <p className="text-xs text-[color:var(--muted-foreground)]">
             Full copy incl. the bot token; the bundle folder is gitignored. Copy the whole{" "}
-            <span className="font-mono">C:\agent-deck</span> folder to your other PC.
+            <span className="font-mono">C:\agent-hub</span> folder to your other PC.
           </p>
           <div className="flex flex-wrap gap-x-6 gap-y-1 text-xs text-[color:var(--muted-foreground)]">
             <span>

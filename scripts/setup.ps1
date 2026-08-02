@@ -85,6 +85,7 @@ Next steps:
   2. Start the backend:   .\scripts\start-backend.ps1
   3. Start the frontend:  .\scripts\start-frontend.ps1   (or .\scripts\start-all.ps1)
   4. Install the CLI:     .\scripts\install-agent-report.ps1
-  5. Optional seed data:  cd backend; .\.venv\Scripts\python.exe -m app.seed
+  5. Worker heartbeat:    .\scripts\install-heartbeat-task.ps1   (after the backend is running)
+  6. Optional seed data:  cd backend; .\.venv\Scripts\python.exe -m app.seed
 Dashboard: http://localhost:3000    API: http://127.0.0.1:8765/api/health
 "@ -ForegroundColor Green

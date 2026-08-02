@@ -112,7 +112,10 @@ Write-Host "`nPrerequisites ready - running setup..." -ForegroundColor Cyan
 Write-Host @"
 
 === Bootstrap complete ===
-Next: install OpenACP itself - start Agent Deck (agent-deck.bat start) and use the
-"Install OpenACP" button on the dashboard's OpenACP page, then apply your
-settings bundle and configure the OpenACP workspace.
+Next:
+  1. Install OpenACP itself - start Agent Deck (agent-deck.bat start) and use the
+     "Install OpenACP" button on the dashboard's OpenACP page, then apply your
+     settings bundle and configure the OpenACP workspace.
+  2. Make this PC show up as a worker:  .\scripts\install-heartbeat-task.ps1
+     (run after Agent Deck is started - it posts a heartbeat immediately to confirm)
 "@ -ForegroundColor Green

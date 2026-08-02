@@ -126,12 +126,26 @@ Health check: <http://127.0.0.1:8765/api/health> • Dashboard: <http://localhos
 
 ## Worker heartbeat task
 
-The **AgentDeck Heartbeat** scheduled task posts a worker heartbeat every 15 minutes. Keep
-`AGENT_DECK_WORKER_STALE_SECONDS` (1200 in `.env.example`) above that interval — with the 300s
-default the worker would report offline between two beats. It runs
-`scripts\heartbeat-silent.vbs`, which starts `scripts\heartbeat.ps1` with no console window —
-pointing the task straight at `powershell.exe` flashes a window on screen every time it fires,
-because Task Scheduler creates the console before `-WindowStyle Hidden` can take effect.
+Nothing runs this automatically — a fresh PC shows **no worker at all** on the dashboard until
+you create the task once:
+
+```powershell
+.\scripts\install-heartbeat-task.ps1
+```
+
+This registers the **AgentDeck Heartbeat** scheduled task, which posts a worker heartbeat every
+15 minutes so this PC shows up (and stays) online. Keep `AGENT_DECK_WORKER_STALE_SECONDS` (1200
+in `.env.example`) above that interval — with the 300s default the worker would report offline
+between two beats. The task runs `scripts\heartbeat-silent.vbs`, which starts
+`scripts\heartbeat.ps1` with no console window — pointing the task straight at `powershell.exe`
+flashes a window on screen every time it fires, because Task Scheduler creates the console
+before `-WindowStyle Hidden` can take effect. `heartbeat-silent.vbs` resolves its own path from
+`WScript.ScriptFullName`, not a hardcoded location, so it keeps working whatever the repository
+folder is named or cloned into.
+
+Running on more than one PC? Set `AGENT_DECK_WORKER_NAME` in `.env` on each — it defaults to
+`%COMPUTERNAME%`, but two PCs sharing a computer name (or one restored from another's image)
+would otherwise collide as the same worker.
 
 The alternative is to set the task to *Run whether the user is logged on or not*, which needs
 administrator rights:
@@ -286,7 +300,7 @@ cd backend
 cd backend; .\.venv\Scripts\python.exe -m pytest
 
 # CLI
-cd cli; C:\agent-deck\backend\.venv\Scripts\python.exe -m pytest
+cd cli; C:\agent-hub\backend\.venv\Scripts\python.exe -m pytest
 
 # Frontend
 cd frontend
@@ -499,7 +513,7 @@ The database lives at **`backend\agent_deck.db`**. To back it up, stop the backe
 the file:
 
 ```powershell
-Copy-Item C:\agent-deck\backend\agent_deck.db "D:\Backups\agent_deck-$(Get-Date -Format yyyyMMdd-HHmm).db"
+Copy-Item C:\agent-hub\backend\agent_deck.db "D:\Backups\agent_deck-$(Get-Date -Format yyyyMMdd-HHmm).db"
 ```
 
 (While the backend is running, prefer `sqlite3 agent_deck.db ".backup backup.db"` if you have
@@ -517,6 +531,7 @@ the sqlite3 CLI, or simply stop the backend first.)
 | `GET`/`PATCH /api/openacp/channel-bindings` returns `503` | The discord-adapter `settings.json` doesn't exist yet — usually because `~/openacp-workspace/.openacp` was never initialized. Run `.\scripts\start-openacp.ps1` once, then *Apply bundle to this PC* (see "Moving to another PC"). Run `.\scripts\diagnose-new-pc.ps1` to pinpoint the missing step. |
 | `alembic upgrade head` fails on an old DB | Back up `backend\agent_deck.db`, then investigate with `alembic current` / `alembic history`. |
 | *Redeploy hook* returns `422` | The channel-bindings module is not built — `cd openacp-channel-bindings; npm run build`. |
+| Workers page shows no worker at all | The **AgentDeck Heartbeat** scheduled task was never created on this PC — run `.\scripts\install-heartbeat-task.ps1` once. |
 | Worker shows *offline (stale)* | No heartbeat within `AGENT_DECK_WORKER_STALE_SECONDS` (1200s); check the **AgentDeck Heartbeat** task. If you shorten the threshold, shorten the task interval with it. |
 | `agent-report` not found after install | Restart the terminal (PATH change), or re-run `.\scripts\install-agent-report.ps1`. |
 | `ModuleNotFoundError: No module named 'agent_report'` (command starts, then dies) | A `pip install --user` copy is being used; agents disable user-site. Re-run `.\scripts\install-agent-report.ps1`, which installs into the venv and removes the `--user` copy. |
@@ -531,10 +546,11 @@ backend/    FastAPI app (app/models, app/schemas, app/routers, app/services), Al
 frontend/   Next.js dashboard (app/, components/, lib/, types/)
 cli/        agent-report package + tests
 templates/  CLAUDE_REPORTING.md, AGENTS_REPORTING.md
-scripts/    setup.ps1, start-backend.ps1, start-frontend.ps1, start-all.ps1, stop-all.ps1,
-            restart-openacp.ps1, stop-openacp.ps1, install-agent-report.ps1, heartbeat.ps1,
-            heartbeat-silent.vbs, cleanup-openacp-tunnels.ps1, make-distributable.ps1,
-            lib.ps1 (helpers shared by the scripts above)
+scripts/    bootstrap.ps1, setup.ps1, start-backend.ps1, start-frontend.ps1, start-all.ps1,
+            stop-all.ps1, start-openacp.ps1, restart-openacp.ps1, stop-openacp.ps1,
+            install-agent-report.ps1, install-heartbeat-task.ps1, heartbeat.ps1,
+            heartbeat-silent.vbs, cleanup-openacp-tunnels.ps1, diagnose-new-pc.ps1,
+            make-distributable.ps1, lib.ps1 (helpers shared by the scripts above)
 agent-deck.bat             Launcher: start | stop | install (menu when double-clicked)
 start-agent-deck.bat       Double-click shortcut for "agent-deck.bat start"
 stop-agent-deck.bat        Double-click shortcut for "agent-deck.bat stop"
