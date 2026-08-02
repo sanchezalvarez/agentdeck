@@ -397,6 +397,50 @@ def test_get_agents_missing_file(client, openacp_env):
     assert client.get("/api/openacp/agents").json() == []
 
 
+def test_install_agent(client, auth, openacp_env, fake_daemon):
+    calls = fake_daemon(
+        FakeCompleted(0, stdout=ONLINE_STATUS),  # workspace lookup
+        FakeCompleted(0, stdout='{"success":true}'),
+    )
+    response = client.post("/api/openacp/agents/gemini/install", headers=auth)
+
+    assert response.status_code == 200
+    body = response.json()
+    assert body["ok"] is True
+    assert body["agent_id"] == "gemini"
+    assert calls[1]["argv"][1:] == ["agents", "install", "gemini", "--json"]
+    # Driven from the workspace, same as every other openacp command here.
+    assert calls[1]["kwargs"]["cwd"] == "C:\\ws"
+
+
+def test_install_agent_reports_failure(client, auth, openacp_env, fake_daemon):
+    fake_daemon(
+        FakeCompleted(0, stdout=ONLINE_STATUS),
+        FakeCompleted(1, stderr="network error"),
+    )
+    body = client.post("/api/openacp/agents/kimi/install", headers=auth).json()
+
+    assert body["ok"] is False
+    assert "network error" in body["output"]
+
+
+def test_install_agent_rejects_unknown_id(client, auth, openacp_env, fake_daemon):
+    calls = fake_daemon(FakeCompleted(0, stdout=ONLINE_STATUS))
+    response = client.post("/api/openacp/agents/not-a-real-agent/install", headers=auth)
+
+    assert response.status_code == 422
+    assert calls == []
+
+
+def test_install_agent_without_cli_returns_503(client, auth, openacp_env, monkeypatch):
+    monkeypatch.setattr(openacp_daemon.shutil, "which", lambda _: None)
+    assert client.post("/api/openacp/agents/claude/install", headers=auth).status_code == 503
+
+
+def test_install_agent_requires_write_token(client, openacp_env):
+    assert client.post("/api/openacp/agents/claude/install").status_code == 401
+
+
 # --- hook ------------------------------------------------------------------
 
 

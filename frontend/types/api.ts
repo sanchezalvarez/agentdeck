@@ -204,6 +204,12 @@ export interface OpenAcpAgent {
   name: string;
 }
 
+export interface OpenAcpAgentInstallResult {
+  ok: boolean;
+  agent_id: string;
+  output: string;
+}
+
 export interface HookStatus {
   installed: boolean | null;
   detail: string;

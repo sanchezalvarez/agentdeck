@@ -59,6 +59,9 @@ class Settings(BaseSettings):
     openacp_foreground_action_timeout_seconds: int = 180
     # A global "npm install -g" can pull the network for minutes on a fresh PC.
     openacp_install_timeout_seconds: int = 300
+    # "openacp agents install <name>" downloads an npx package or binary —
+    # same order of magnitude as the npm install above.
+    openacp_agent_install_timeout_seconds: int = 300
     # Full copy of the OpenACP settings.json (token INCLUDED) kept inside the
     # repo folder so it travels when the folder is copied to another PC. The
     # directory is gitignored — it must never be committed.

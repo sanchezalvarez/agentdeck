@@ -24,6 +24,7 @@ from pathlib import Path
 from fastapi import HTTPException
 
 from ..schemas.openacp import (
+    AgentInstallResult,
     DaemonActionResult,
     DaemonStatusRead,
     OpenAcpSessionRead,
@@ -31,6 +32,21 @@ from ..schemas.openacp import (
 )
 
 MAX_OUTPUT_CHARS = 4096
+
+# Curated subset of the ACP registry (28+ entries — "openacp agents") that the
+# dashboard offers a one-click install for. Anything else can still be
+# installed by hand with "openacp agents install <name>"; this list exists so
+# the button only ever sends a known-good id, never an arbitrary string typed
+# into a request. Keep in sync with AGENT_CATALOG in
+# frontend/app/openacp/page.tsx.
+AGENT_CATALOG = {
+    "claude": "Claude Agent",
+    "codex": "Codex",
+    "gemini": "Gemini CLI",
+    "opencode": "OpenCode",
+    "kimi": "Kimi CLI",
+    "grok-build": "Grok Build",
+}
 # Sessions in these states hold resources and would be lost on restart.
 ACTIVE_SESSION_STATES = {"active", "initializing"}
 
@@ -347,6 +363,40 @@ def cancel_session(session_id: str, timeout: int) -> SessionActionResult:
         raise HTTPException(status_code=502, detail=_truncate(str(data["error"])))
 
     return SessionActionResult(ok=bool(data.get("cancelled")), session_id=session_id)
+
+
+def install_agent(agent_id: str, timeout: int) -> AgentInstallResult:
+    """Installs one ACP agent plugin via "openacp agents install <id>".
+
+    Restricted to AGENT_CATALOG even though the id never reaches a shell — the
+    dashboard button should only ever send a known-good name, not an arbitrary
+    string. Runs from the workspace directory (creating it if this is the
+    first OpenACP action on this PC) for the same reason every other command
+    here does.
+    """
+    if agent_id not in AGENT_CATALOG:
+        raise HTTPException(status_code=422, detail=f"Unknown agent id: {agent_id}")
+
+    if not _cli_path():
+        raise HTTPException(status_code=503, detail="openacp was not found on the backend's PATH")
+
+    cwd = _workspace_dir(timeout)
+
+    try:
+        result = _run(["agents", "install", agent_id, "--json"], timeout, cwd=cwd)
+    except FileNotFoundError:
+        raise HTTPException(status_code=503, detail="openacp was not found on the backend's PATH")
+    except subprocess.TimeoutExpired:
+        raise HTTPException(status_code=504, detail=f"openacp agents install {agent_id} timed out")
+
+    output = _truncate("\n".join(part for part in (result.stdout, result.stderr) if part))
+    ok = result.returncode == 0
+
+    return AgentInstallResult(
+        ok=ok,
+        agent_id=agent_id,
+        output=output or (f"{agent_id} installed" if ok else f"{agent_id} install failed"),
+    )
 
 
 def _default_workspace_dir() -> str:

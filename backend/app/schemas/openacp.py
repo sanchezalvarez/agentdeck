@@ -9,6 +9,7 @@ from ..services.openacp_validation import (
 )
 
 __all__ = [
+    "AgentInstallResult",
     "AgentRead",
     "DaemonActionResult",
     "DaemonStatusRead",
@@ -128,6 +129,12 @@ class ChannelBindingsRead(BaseModel):
 class AgentRead(BaseModel):
     id: str
     name: str
+
+
+class AgentInstallResult(BaseModel):
+    ok: bool
+    agent_id: str
+    output: str
 
 
 class HookStatusRead(BaseModel):

@@ -6,6 +6,7 @@ from ..config import get_settings
 from ..dependencies import SessionDep, WriteAuth
 from ..models.tables import Project
 from ..schemas.openacp import (
+    AgentInstallResult,
     AgentRead,
     ChannelBindingsRead,
     ChannelBindingsUpdate,
@@ -84,6 +85,17 @@ async def update_channel_bindings(
 @router.get("/agents", response_model=list[AgentRead])
 async def list_agents() -> list[AgentRead]:
     return openacp_settings.read_agents(get_settings().openacp_agents_path)
+
+
+@router.post("/agents/{agent_id}/install", response_model=AgentInstallResult, dependencies=[WriteAuth])
+async def install_agent(agent_id: str) -> AgentInstallResult:
+    """Installs one agent CLI from OpenACP's ACP registry (openacp_daemon.AGENT_CATALOG)."""
+    settings = get_settings()
+    return await to_thread.run_sync(
+        openacp_daemon.install_agent,
+        agent_id,
+        settings.openacp_agent_install_timeout_seconds,
+    )
 
 
 # --- Settings transfer (move to another PC) --------------------------------

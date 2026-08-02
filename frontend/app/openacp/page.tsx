@@ -24,6 +24,7 @@ import type {
   DaemonStatus,
   HookStatus,
   OpenAcpAgent,
+  OpenAcpAgentInstallResult,
   OpenAcpInstallResult,
   OpenAcpInstallStatus,
   OpenAcpSession,
@@ -37,6 +38,19 @@ import type {
 type DaemonAction = "restart" | "stop";
 
 const SNOWFLAKE = /^\d{17,20}$/;
+
+/** Curated subset of the ACP registry (it has 28+ entries) offered as a
+ * one-click install. Kept in sync with AGENT_CATALOG in
+ * backend/app/services/openacp_daemon.py — anything else can still be
+ * installed by hand with "openacp agents install <name>". */
+const AGENT_CATALOG: { id: string; name: string }[] = [
+  { id: "claude", name: "Claude Agent" },
+  { id: "codex", name: "Codex" },
+  { id: "gemini", name: "Gemini CLI" },
+  { id: "opencode", name: "OpenCode" },
+  { id: "kimi", name: "Kimi CLI" },
+  { id: "grok-build", name: "Grok Build" },
+];
 
 /** Sentinel for the "not one of my projects" option in the workspace dropdown. */
 const CUSTOM = "__custom__";
@@ -91,6 +105,8 @@ export default function OpenAcpPage() {
   const [install, setInstall] = useState<OpenAcpInstallStatus | null>(null);
   const [installing, setInstalling] = useState(false);
   const [installOutput, setInstallOutput] = useState<string | null>(null);
+  const [agentInstallBusy, setAgentInstallBusy] = useState<string | null>(null);
+  const [agentInstallOutput, setAgentInstallOutput] = useState<string | null>(null);
   const [transfer, setTransfer] = useState<SettingsTransferStatus | null>(null);
   const [transferBusy, setTransferBusy] = useState<"export" | "import" | null>(null);
   const [transferMsg, setTransferMsg] = useState<string | null>(null);
@@ -233,6 +249,23 @@ export default function OpenAcpPage() {
       setFormError(err instanceof Error ? err.message : "OpenACP install failed");
     } finally {
       setInstalling(false);
+    }
+  };
+
+  const installAgent = async (agentId: string) => {
+    setAgentInstallBusy(agentId);
+    setFormError(null);
+    setAgentInstallOutput(null);
+    try {
+      const result = await apiPost<OpenAcpAgentInstallResult>(
+        `/api/openacp/agents/${agentId}/install`,
+      );
+      setAgentInstallOutput(`${agentId}: ${result.output}`);
+      if (result.ok) await refresh();
+    } catch (err) {
+      setFormError(err instanceof Error ? err.message : `Install ${agentId} failed`);
+    } finally {
+      setAgentInstallBusy(null);
     }
   };
 
@@ -404,6 +437,43 @@ export default function OpenAcpPage() {
           {installOutput && (
             <pre className="overflow-x-auto rounded bg-[color:var(--background-3)] p-2 text-xs text-[color:var(--foreground)]">
               {installOutput}
+            </pre>
+          )}
+        </CardContent>
+      </Card>
+
+      <Card>
+        <CardHeader>
+          <CardTitle>Agent CLIs</CardTitle>
+        </CardHeader>
+        <CardContent className="space-y-3 text-sm">
+          <p className="text-xs text-[color:var(--muted-foreground)]">
+            Installs an agent plugin through <span className="font-mono">openacp agents install</span> —
+            this is what fills the Agent dropdown above. Restart OpenACP afterwards to pick it up.
+          </p>
+          <div className="flex flex-wrap gap-2">
+            {AGENT_CATALOG.map((catalogAgent) => {
+              const installed = agents.some((a) => a.id === catalogAgent.id);
+              return (
+                <Button
+                  key={catalogAgent.id}
+                  variant="outline"
+                  size="sm"
+                  disabled={installed || agentInstallBusy !== null}
+                  onClick={() => installAgent(catalogAgent.id)}
+                >
+                  {installed
+                    ? `${catalogAgent.name} ✓`
+                    : agentInstallBusy === catalogAgent.id
+                      ? "Installing…"
+                      : `Install ${catalogAgent.name}`}
+                </Button>
+              );
+            })}
+          </div>
+          {agentInstallOutput && (
+            <pre className="overflow-x-auto rounded bg-[color:var(--background-3)] p-2 text-xs text-[color:var(--foreground)]">
+              {agentInstallOutput}
             </pre>
           )}
         </CardContent>
