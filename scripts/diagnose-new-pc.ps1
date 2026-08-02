@@ -159,3 +159,11 @@ if ($script:FailCount -eq 0) {
 } else {
     Write-Host "=== $($script:FailCount) check(s) failed — fix them top to bottom, each later step can depend on the ones above it ===" -ForegroundColor Red
 }
+
+# Double-clicking this script in Explorer opens a console that closes itself
+# the instant the script ends, taking every red [fail] line with it. Pause so
+# it stays readable either way.
+if ($Host.Name -eq "ConsoleHost") {
+    Write-Host ""
+    Read-Host "Press Enter to close"
+}
