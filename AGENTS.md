@@ -347,6 +347,7 @@ only edits its configuration and re-applies its hook.
 | `GET /api/openacp/daemon-status` | Daemon state, PID, mode and count of running sessions |
 | `POST /api/openacp/daemon/restart` | Restart OpenACP (write token) |
 | `POST /api/openacp/daemon/stop` | Stop OpenACP (write token) |
+| `GET /api/openacp/doctor` | Runs `openacp doctor --json` — config, agents, storage, workspace, plugins, daemon, tunnel checks |
 
 Three things to know:
 
@@ -370,6 +371,17 @@ Three things to know:
   installation* card installs `@openacp/cli` + `@openacp/discord-adapter` globally via npm (same as
   `npm install -g @openacp/cli @openacp/discord-adapter`). It does not create the OpenACP workspace
   or set the Discord bot token — those stay manual.
+- **The Agent dropdown is populated from `.openacp/agents.json`, not `settings.json`.**
+  `settings.json` only records which agent id a channel is already bound to; the *list of
+  choices* comes from whichever ACP agent plugins `openacp agents install <name>` has actually
+  registered in this workspace. The **Agent CLIs** card installs from a curated catalog
+  (`openacp_daemon.AGENT_CATALOG`) — if `openacp` reports an agent as already installed but
+  `agents.json` never got the record (e.g. a workspace restored from another PC's settings
+  bundle that never itself ran an install), the install endpoint retries once with `--force` to
+  make the CLI (re)write it.
+- **The OpenACP doctor card** (`GET /api/openacp/doctor`) runs `openacp doctor --json` and shows
+  every category (config, agents, storage, workspace, plugins, daemon, tunnel) right in the
+  dashboard — the fastest way to see *why* something is broken instead of guessing from a 503.
 
 Writes are guarded: the workspace directory must exist, channel IDs must be Discord snowflakes,
 the file is written atomically with a timestamped backup, and a revision check rejects the save
@@ -496,6 +508,9 @@ the sqlite3 CLI, or simply stop the backend first.)
 | Worker shows *offline (stale)* | No heartbeat within `AGENT_DECK_WORKER_STALE_SECONDS` (1200s); check the **AgentDeck Heartbeat** task. If you shorten the threshold, shorten the task interval with it. |
 | `agent-report` not found after install | Restart the terminal (PATH change), or re-run `.\scripts\install-agent-report.ps1`. |
 | `ModuleNotFoundError: No module named 'agent_report'` (command starts, then dies) | A `pip install --user` copy is being used; agents disable user-site. Re-run `.\scripts\install-agent-report.ps1`, which installs into the venv and removes the `--user` copy. |
+| Channel-bindings Agent dropdown only ever shows one option, or none | It's populated from `.openacp/agents.json`, not `settings.json` — click **Refresh**, then use the **Agent CLIs** card to install the ones you need. Run `GET /api/openacp/doctor` (the **OpenACP doctor** card) to see if a lower-level problem (e.g. missing `npx`) is preventing installs from registering at all. |
+| Agent install reports `INSTALL_FAILED: "... is already installed. Use --force to reinstall"` but `agents.json` doesn't have it | `openacp` tracked the install somewhere outside this workspace (common after restoring a settings bundle onto a workspace that never itself ran an install) without writing the workspace record. The dashboard's install endpoint already retries with `--force` automatically — click **Install** again; if that still fails, check **OpenACP doctor**'s Agents category. |
+| **OpenACP doctor**'s Agents category reports `npx not found in PATH` even though `Get-Command npx` finds it in PowerShell | PowerShell also resolves `.ps1` scripts, but `openacp` (a Node CLI) looks for `npx.cmd`/`npx.exe` via `PATHEXT`, which doesn't include `.ps1` by default. This means Node.js itself is missing its `.cmd` shims — not something this repo's scripts install or fix. Reinstall the full Node.js LTS via `winget uninstall OpenJS.NodeJS; winget install OpenJS.NodeJS.LTS` (the exact winget id `scripts\bootstrap.ps1` uses), reopen the terminal, and confirm `Get-Command npx` now shows `npx.cmd`. |
 
 ## Repository layout
 

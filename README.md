@@ -64,6 +64,12 @@ Agent Deck does not ship a Discord bot — you use your own.
    Details: [`openacp-channel-bindings/README.md`](openacp-channel-bindings/README.md).
 3. Restart OpenACP. The adapter reads its settings only at startup.
 
+Need an agent other than Claude/Codex in the binding dropdown (Gemini, OpenCode, Kimi, Grok...)?
+The **Agent CLIs** card on the same page installs from OpenACP's registry with one click. If
+anything on the page looks broken, **OpenACP doctor** (top of the page) runs OpenACP's own health
+check and shows exactly which category — config, agents, storage, workspace, plugins, daemon,
+tunnel — is failing.
+
 ## Let agents report their work
 
 Install the reporting CLI, then copy the matching template into each project you want tracked:
