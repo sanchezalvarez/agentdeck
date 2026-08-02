@@ -28,7 +28,11 @@ if (-not $workspace) {
 }
 
 if (-not (Test-Path $workspace)) {
-    Write-Error "OpenACP workspace not found: $workspace"
+    # A genuinely fresh PC has no workspace folder yet — nothing in setup.ps1 or
+    # the OpenACP install step creates it, so without this the very first start
+    # here would hard-fail before OpenACP gets a chance to bootstrap .openacp\.
+    New-Item -ItemType Directory -Path $workspace | Out-Null
+    Write-Host "[fix]   created OpenACP workspace folder: $workspace" -ForegroundColor Cyan
 }
 
 Write-Host "OpenACP  $workspace" -ForegroundColor Cyan

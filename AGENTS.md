@@ -406,11 +406,21 @@ The path is:
 3. Double-click `agent-deck.bat` → **Install** (installs Python, Node and PowerShell 7 via
    winget, then runs `setup.ps1` — recreates the venv, installs `node_modules`, creates `.env`).
 4. Start Agent Deck: `agent-deck.bat` → **Start**.
-5. On the dashboard's **OpenACP** page, click *Install OpenACP*.
-6. Click *Apply bundle to this PC* to restore the OpenACP settings from `openacp-config/`
+5. On the dashboard's **OpenACP** page, click *Install OpenACP*. This only `npm install -g`'s
+   the two pinned packages — it does **not** create the OpenACP workspace (`~/openacp-workspace`)
+   or initialize `.openacp/`, so the settings file `channel-bindings` depends on does not exist
+   yet and the page's channel-binding editor will read as `503` until the next step.
+6. Run `.\scripts\start-openacp.ps1` once. It creates `~/openacp-workspace` if missing and lets
+   OpenACP bootstrap `.openacp/` (config, plugin manifest) — without this, step 7 has nowhere
+   valid to write into. Stop it again (close the window) once it has started cleanly.
+7. Click *Apply bundle to this PC* to restore the OpenACP settings from `openacp-config/`
    (the previous file, if any, is kept as `settings.json.pre-import.bak`), then restart OpenACP.
-7. Make sure the bound workspace folders (e.g. `C:\unity\*`) exist on the new PC, or OpenACP drops
+8. Make sure the bound workspace folders (e.g. `C:\unity\*`) exist on the new PC, or OpenACP drops
    those bindings.
+
+Run `.\scripts\diagnose-new-pc.ps1` at any point to check every precondition above in dependency
+order — it's read-only and points at exactly which step is missing instead of only surfacing as
+a `503` from `/api/openacp/channel-bindings`.
 
 > **The `openacp-config/` bundle carries the Discord bot token in plain text.** It travels inside
 > the copied folder on purpose, but is gitignored so it cannot be committed. Move it on physical
@@ -477,6 +487,7 @@ the sqlite3 CLI, or simply stop the backend first.)
 | Dashboard shows "Backend offline" | Backend not running or wrong port; check <http://127.0.0.1:8765/api/health>. |
 | Dashboard actions fail with 401 | Set `NEXT_PUBLIC_AGENT_DECK_WRITE_TOKEN` in `frontend\.env.local` and restart the frontend. |
 | `alembic upgrade head` fails right after copying to a new PC | The copied `backend\.venv` points at the old PC's Python. Delete it and re-run `.\scripts\setup.ps1`. |
+| `GET`/`PATCH /api/openacp/channel-bindings` returns `503` | The discord-adapter `settings.json` doesn't exist yet — usually because `~/openacp-workspace/.openacp` was never initialized. Run `.\scripts\start-openacp.ps1` once, then *Apply bundle to this PC* (see "Moving to another PC"). Run `.\scripts\diagnose-new-pc.ps1` to pinpoint the missing step. |
 | `alembic upgrade head` fails on an old DB | Back up `backend\agent_deck.db`, then investigate with `alembic current` / `alembic history`. |
 | *Redeploy hook* returns `422` | The channel-bindings module is not built — `cd openacp-channel-bindings; npm run build`. |
 | Worker shows *offline (stale)* | No heartbeat within `AGENT_DECK_WORKER_STALE_SECONDS` (1200s); check the **AgentDeck Heartbeat** task. If you shorten the threshold, shorten the task interval with it. |
