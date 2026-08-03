@@ -39,6 +39,33 @@ Write-Host "OpenACP  $workspace" -ForegroundColor Cyan
 Write-Host "Close this window to stop OpenACP and all agent sessions." -ForegroundColor DarkGray
 Write-Host ""
 
+# --- OpenACP CLI ESM loader patch ------------------------------------------
+# Without this, @openacp/cli cannot load ANY npm plugin on Windows, the Discord
+# adapter among them, and Discord goes completely silent while still looking
+# installed everywhere you would check. Verified before the hook below because an
+# adapter that never loads makes the hook irrelevant. Restored to its broken
+# state by every "openacp update", so it is checked on every start.
+$cliPatchScript = Join-Path $PSScriptRoot "patch-openacp-cli.mjs"
+
+if (-not (Get-Command node -ErrorAction SilentlyContinue)) {
+    Write-Host "[skip]  node not on PATH - OpenACP CLI patch not verified" -ForegroundColor Yellow
+} elseif (-not (Test-Path $cliPatchScript)) {
+    Write-Host "[skip]  patch-openacp-cli.mjs not found - OpenACP CLI patch not verified" -ForegroundColor Yellow
+} else {
+    node $cliPatchScript --check 2>&1 | Out-Null
+    if ($LASTEXITCODE -eq 0) {
+        Write-Host "[ok]    OpenACP CLI ESM loader patched" -ForegroundColor DarkGray
+    } else {
+        Write-Host "[fix]   OpenACP CLI unpatched - npm plugins cannot load on Windows, patching" -ForegroundColor Cyan
+        node $cliPatchScript 2>&1 | ForEach-Object { Write-Host "        $_" }
+        if ($LASTEXITCODE -ne 0) {
+            Write-Host "[warn]  CLI patch failed - the Discord adapter will NOT load" -ForegroundColor Red
+        }
+    }
+    # A non-zero code from the check above is an answer, not this script's result.
+    $global:LASTEXITCODE = 0
+}
+
 # --- Channel-bindings hook -------------------------------------------------
 # Reinstalling or updating @openacp/discord-adapter restores its untouched dist
 # and takes the hook with it. An unhooked adapter looks exactly like a healthy
