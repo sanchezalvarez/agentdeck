@@ -22,12 +22,19 @@ if (Get-ScheduledTask -TaskName $taskName -ErrorAction SilentlyContinue) {
 }
 
 $action = New-ScheduledTaskAction -Execute "wscript.exe" -Argument "`"$vbsPath`""
+# No -RepetitionDuration: omitting it means "repeat indefinitely". Do not pass
+# [TimeSpan]::MaxValue — it serialises to P99999999DT23H59M59S, which Task
+# Scheduler rejects outright ("value which is incorrectly formatted or out of
+# range"), leaving no task behind at all.
 $trigger = New-ScheduledTaskTrigger -Once -At (Get-Date) `
-    -RepetitionInterval (New-TimeSpan -Minutes 15) -RepetitionDuration ([TimeSpan]::MaxValue)
+    -RepetitionInterval (New-TimeSpan -Minutes 15)
 
+# -ErrorAction Stop because Register-ScheduledTask surfaces this failure as a
+# non-terminating CIM error, which $ErrorActionPreference does not catch — the
+# script would otherwise print "Created ..." after creating nothing.
 Register-ScheduledTask -TaskName $taskName -Action $action -Trigger $trigger `
     -Description "Posts a worker heartbeat to Agent Deck every 15 minutes (scripts\heartbeat.ps1 via heartbeat-silent.vbs)." `
-    | Out-Null
+    -ErrorAction Stop | Out-Null
 
 Write-Host "Created scheduled task '$taskName' -> $vbsPath (every 15 minutes)." -ForegroundColor Green
 Write-Host "Running it once now to confirm it actually reaches the backend..." -ForegroundColor Cyan
