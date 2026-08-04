@@ -88,9 +88,27 @@ if ($npm) {
     elseif ($cliVersion) { Write-Fail "@openacp/cli@$cliVersion installed but pinned version is $PinnedCliVersion — dashboard OpenACP page -> Install OpenACP to re-pin it" }
     else { Write-Fail "@openacp/cli not found in npm global list" }
 
-    if ($adapterVersion -eq $PinnedAdapterVersion) { Write-Ok "@openacp/discord-adapter@$adapterVersion matches pinned version" }
+    # The global adapter is NOT the copy OpenACP loads — it boots the workspace
+    # plugin checked further down. A green line here proves nothing about Discord.
+    if ($adapterVersion -eq $PinnedAdapterVersion) { Write-Ok "@openacp/discord-adapter@$adapterVersion matches pinned version (global copy — not the one OpenACP loads)" }
     elseif ($adapterVersion) { Write-Fail "@openacp/discord-adapter@$adapterVersion installed but pinned version is $PinnedAdapterVersion — dashboard OpenACP page -> Install OpenACP to re-pin it" }
     else { Write-Fail "@openacp/discord-adapter not found in npm global list" }
+}
+
+# --- OpenACP CLI patch ---------------------------------------------------------
+# Without it @openacp/cli cannot load any npm plugin on Windows, so the Discord
+# adapter is skipped at boot no matter how correctly everything below is set up.
+Write-Host "`n--- OpenACP CLI patch (Windows ESM loader) ---" -ForegroundColor Cyan
+
+$cliPatchScript = Join-Path $root "scripts\patch-openacp-cli.mjs"
+if (-not $node) {
+    Write-Warn "node not on PATH — cannot check the CLI patch"
+} elseif (-not (Test-Path $cliPatchScript)) {
+    Write-Fail "patch-openacp-cli.mjs not found at $cliPatchScript"
+} else {
+    node $cliPatchScript --check *> $null
+    if ($LASTEXITCODE -eq 0) { Write-Ok "CLI ESM loader is patched" }
+    else { Write-Fail "CLI ESM loader is NOT patched — npm plugins cannot load on Windows, so Discord stays silent. Run: node `"$cliPatchScript`" (scripts\start-openacp.ps1 also does this automatically)" }
 }
 
 # --- OpenACP workspace --------------------------------------------------------
@@ -134,6 +152,25 @@ if ($settingsForBindings) {
     } catch {
         Write-Warn "could not parse $settingsForBindings as JSON: $_"
     }
+}
+
+# --- Discord adapter as a workspace plugin --------------------------------------
+# The one check that actually predicts whether Discord works: OpenACP boots only
+# what .openacp\plugins.json lists, loaded from .openacp\plugins\node_modules.
+# A global npm install satisfies neither, and the hook check below passes anyway
+# because it patches the global copy — which is how a completely dead Discord can
+# still produce an all-green report.
+Write-Host "`n--- Discord adapter (workspace plugin) ---" -ForegroundColor Cyan
+
+$pluginScript = Join-Path $root "scripts\install-openacp-plugin.mjs"
+if (-not $node) {
+    Write-Warn "node not on PATH — cannot check the workspace plugin"
+} elseif (-not (Test-Path $pluginScript)) {
+    Write-Fail "install-openacp-plugin.mjs not found at $pluginScript"
+} else {
+    node $pluginScript --check *> $null
+    if ($LASTEXITCODE -eq 0) { Write-Ok "adapter installed and registered as a workspace plugin" }
+    else { Write-Fail "adapter is NOT a workspace plugin — OpenACP will never load it and Discord stays silent. Run: node `"$pluginScript`" (scripts\start-openacp.ps1 also does this automatically)" }
 }
 
 # --- Adapter hook --------------------------------------------------------------

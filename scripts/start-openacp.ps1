@@ -66,6 +66,34 @@ if (-not (Get-Command node -ErrorAction SilentlyContinue)) {
     $global:LASTEXITCODE = 0
 }
 
+# --- Discord adapter as a workspace plugin ---------------------------------
+# OpenACP boots adapters from .openacp\plugins + plugins.json, not from the global
+# npm install the dashboard's "Install OpenACP" performs. Neither `openacp install`
+# nor the onboarding wizard can put it there on Windows, so a fresh PC would run
+# with no Discord adapter at all — silently. Comes after the CLI patch (an
+# unpatched CLI cannot load the plugin anyway) and before the hook, which has
+# nothing to patch until the adapter exists.
+$pluginScript = Join-Path $PSScriptRoot "install-openacp-plugin.mjs"
+
+if (-not (Get-Command node -ErrorAction SilentlyContinue)) {
+    Write-Host "[skip]  node not on PATH - Discord workspace plugin not verified" -ForegroundColor Yellow
+} elseif (-not (Test-Path $pluginScript)) {
+    Write-Host "[skip]  install-openacp-plugin.mjs not found - workspace plugin not verified" -ForegroundColor Yellow
+} else {
+    node $pluginScript --check 2>&1 | Out-Null
+    if ($LASTEXITCODE -eq 0) {
+        Write-Host "[ok]    Discord adapter installed as a workspace plugin" -ForegroundColor DarkGray
+    } else {
+        Write-Host "[fix]   Discord adapter not a workspace plugin - installing it" -ForegroundColor Cyan
+        node $pluginScript 2>&1 | ForEach-Object { Write-Host "        $_" }
+        if ($LASTEXITCODE -ne 0) {
+            Write-Host "[warn]  workspace plugin install failed - Discord will NOT work" -ForegroundColor Red
+        }
+    }
+    # A non-zero code from the check above is an answer, not this script's result.
+    $global:LASTEXITCODE = 0
+}
+
 # --- Channel-bindings hook -------------------------------------------------
 # Reinstalling or updating @openacp/discord-adapter restores its untouched dist
 # and takes the hook with it. An unhooked adapter looks exactly like a healthy

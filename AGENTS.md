@@ -98,6 +98,7 @@ alembic downgrade -1                      # roll back one migration
 .\scripts\stop-openacp.ps1     # stop OpenACP, daemon or foreground
 .\scripts\cleanup-openacp-tunnels.ps1  # kill leaked cloudflared tunnels (-All: every OpenACP tunnel)
 node .\scripts\patch-openacp-cli.mjs   # re-apply the CLI ESM fix (--check | --revert); start-openacp does this
+node .\scripts\install-openacp-plugin.mjs  # install the Discord adapter as a workspace plugin (--check)
 .\scripts\make-distributable.ps1       # clean shareable zip (see below)
 ```
 
@@ -441,28 +442,48 @@ Copying the folder alone does **not** work: `backend\.venv` hard-codes absolute 
 `node_modules` is platform-bound, and OpenACP + its workspace live outside the repository.
 The path is:
 
-1. **Before copying**, on the source PC's dashboard OpenACP page, click *Copy settings.json here* —
-   this writes the live OpenACP settings (**Discord bot token included**) into `openacp-config/`
-   inside the repo. That folder is **gitignored**; it must never be committed.
+Steps 1–5 are the same whether the new PC keeps the current Discord bot or gets a new
+one; step 6 is where the two paths differ.
+
+1. **Before copying** — *only if the new PC will reuse the same Discord bot.* On the source
+   PC's dashboard OpenACP page, click *Copy settings.json here*: it writes the live OpenACP
+   settings (**Discord bot token included**) into `openacp-config/` inside the repo. That
+   folder is **gitignored**; it must never be committed. Skip this for a new bot — the bundle
+   carries the old bot's token and the old server's channel IDs, none of which apply.
 2. Copy the repository.
 3. Double-click `agent-deck.bat` → **Install** (installs Python, Node and PowerShell 7 via
    winget, then runs `setup.ps1` — recreates the venv, installs `node_modules`, creates `.env`).
 4. Start Agent Deck: `agent-deck.bat` → **Start**.
 5. On the dashboard's **OpenACP** page, click *Install OpenACP*. This only `npm install -g`'s
-   the two pinned packages — it does **not** create the OpenACP workspace (`~/openacp-workspace`)
-   or initialize `.openacp/`, so the settings file `channel-bindings` depends on does not exist
-   yet and the page's channel-binding editor will read as `503` until the next step.
-6. Run `.\scripts\start-openacp.ps1` once. It creates `~/openacp-workspace` if missing and lets
-   OpenACP bootstrap `.openacp/` (config, plugin manifest) — without this, step 7 has nowhere
-   valid to write into. Stop it again (close the window) once it has started cleanly.
-7. Click *Apply bundle to this PC* to restore the OpenACP settings from `openacp-config/`
-   (the previous file, if any, is kept as `settings.json.pre-import.bak`), then restart OpenACP.
+   the two pinned packages — it does **not** create the OpenACP workspace (`~/openacp-workspace`),
+   initialize `.openacp/`, or install the Discord adapter where OpenACP actually loads it from.
+   The channel-binding editor reads as `503` until the next step.
+6. Run `.\scripts\start-openacp.ps1` **twice**. The first run creates `~/openacp-workspace` and
+   lets OpenACP bootstrap `.openacp/`; close the window once it has started cleanly. The second
+   run — now that `.openacp/` exists — applies the CLI patch, installs the Discord adapter as a
+   workspace plugin, and installs the channel-bindings hook, reporting each as `[ok]` or `[fix]`.
+   Leave it running.
+7. Configure the bot, by whichever path applies:
+   - **Same bot:** dashboard → *Apply bundle to this PC* (the previous settings file, if any, is
+     kept as `settings.json.pre-import.bak`), then restart OpenACP.
+   - **New bot:** run `openacp onboard` from `~\openacp-workspace` and give it the new bot token
+     and server. It writes `plugins\data\@openacp\discord-adapter\settings.json`, whose keys are
+     *all* environment-specific: `botToken`, `guildId`, `forumChannelId`, `notificationChannelId`,
+     `assistantThreadId` and `channelBindings`. Set the channel bindings afterwards from the
+     dashboard's OpenACP page rather than by hand. (`OPENACP_DISCORD_BOT_TOKEN` and
+     `OPENACP_DISCORD_GUILD_ID` also seed those two keys, but only once the settings file exists.)
 8. Make sure the bound workspace folders (e.g. `C:\unity\*`) exist on the new PC, or OpenACP drops
    those bindings.
 
 Run `.\scripts\diagnose-new-pc.ps1` at any point to check every precondition above in dependency
 order — it's read-only and points at exactly which step is missing instead of only surfacing as
 a `503` from `/api/openacp/channel-bindings`.
+
+**Confirm Discord is actually live before trusting any of it.** `openacp channels` must list
+`discord`, and the log must contain `Discord adapter registered`. Neither the dashboard's
+hook-status nor `npm ls -g` proves this: both are satisfied by the *global* adapter copy, which
+OpenACP never loads. That is precisely how a completely silent Discord — no startup notification,
+no message ever reaching an agent — can sit behind an all-green report.
 
 > **The `openacp-config/` bundle carries the Discord bot token in plain text.** It travels inside
 > the copied folder on purpose, but is gitignored so it cannot be committed. Move it on physical
@@ -539,9 +560,8 @@ the sqlite3 CLI, or simply stop the backend first.)
 | Channel-bindings Agent dropdown only ever shows one option, or none | It's populated from `.openacp/agents.json`, not `settings.json` — click **Refresh**, then use the **Agent CLIs** card to install the ones you need. Run `GET /api/openacp/doctor` (the **OpenACP doctor** card) to see if a lower-level problem is preventing installs from registering at all — but note that its `npx not found in PATH` result is a false alarm on Windows (see the row below). |
 | Agent install reports `INSTALL_FAILED: "... is already installed. Use --force to reinstall"` but `agents.json` doesn't have it | `openacp` tracked the install somewhere outside this workspace (common after restoring a settings bundle onto a workspace that never itself ran an install) without writing the workspace record. The dashboard's install endpoint already retries with `--force` automatically — click **Install** again; if that still fails, check **OpenACP doctor**'s Agents category. |
 | **OpenACP doctor**'s Agents category reports `npx not found in PATH` (`fail` for the default agent, `warn` for the others) | **Cosmetic — a Windows bug in `openacp doctor` itself, not a problem with this PC.** The Agents check calls `commandExists()`, which shells out to `which` — a Unix command Windows does not have (`where` is the equivalent). `execFileSync("which", …)` throws `ENOENT`, and the only fallback is walking up for `node_modules/.bin/<cmd>`, so on Windows the check reports *every* agent whose `command` is `npx` (in `agents.json`: `claude`, `codex`) as missing no matter what the real PATH is. Agents still launch fine: the spawn path uses a different, Windows-aware function (`resolveAgentCommand()`), which resolves `<node dir>\node_modules\npm\bin\npx-cli.js` and runs it with `node`. Confirm it works by looking for `Agent warm-pool: instance ready` in `~\openacp-workspace\.openacp\logs\openacp.1.log`. **Do not reinstall Node.js over this** — verify instead with `Test-Path "$env:ProgramFiles\nodejs\npx.cmd"` (`True`) and `node -e "require('child_process').execFileSync('where',['npx'])"` (succeeds). Observed on `@openacp/cli` 2026.518.2; fix belongs upstream. |
-| Discord is silent on a fresh PC: no startup notification, messages never reach an agent, `GET /api/openacp/daemon-status` shows `"channels": []` | The adapter is not actually loaded. `hook-status` saying `installed: true` does **not** prove it — the backend also accepts the *global* npm copy, which OpenACP never loads. Check the log (`~\openacp-workspace\.openacp\logs\openacp.1.log`) for `Discord adapter registered`; if only `@openacp/tunnel` appears, work through the three causes below, then restart OpenACP and confirm `openacp channels` lists `discord`. |
-| ↳ 1. Adapter missing from the workspace | `.openacp\plugins\package.json` has empty `dependencies` and there is no `plugins\node_modules\@openacp\discord-adapter`. `openacp install @openacp/discord-adapter` is supposed to fix this but **fails on Windows** — it runs `execFileSync("npm", …)` without `shell: true`, so `npm.cmd` is never found and the ENOENT surfaces as the misleading `Failed to install … Check the package name and try again`. Work around it with `npm install @openacp/discord-adapter@<pinned> --save` run inside `~\openacp-workspace\.openacp\plugins`. |
-| ↳ 2. Adapter missing from the plugin registry | `.openacp\plugins.json` is the registry OpenACP boots from; the npm install alone does not add an entry. Add one alongside the builtins with `"source": "npm"`, `"enabled": true`, the real `version`, and `settingsPath` pointing at `plugins\data\@openacp\discord-adapter\settings.json`. Do **not** re-run the plugin's interactive `install` hook to get it — that rewrites `settings.json`, losing the bot token and every channel binding. Verify with `openacp plugins`. |
+| Discord is silent on a fresh PC: no startup notification, messages never reach an agent, `GET /api/openacp/daemon-status` shows `"channels": []` | The adapter is not actually loaded. `hook-status` saying `installed: true` does **not** prove it — the backend also accepts the *global* npm copy, which OpenACP never loads. Check the log (`~\openacp-workspace\.openacp\logs\openacp.1.log`) for `Discord adapter registered`; if only `@openacp/tunnel` appears, work through the causes below, then restart OpenACP and confirm `openacp channels` lists `discord`. Normally none of this is manual: `start-openacp.ps1` repairs all of it on every start. |
+| ↳ 1 & 2. Adapter missing from the workspace and/or the plugin registry | OpenACP loads adapters from `.openacp\plugins\node_modules` and boots only what `.openacp\plugins.json` lists; a global `npm install -g` satisfies neither. Both supported ways to fix that are broken on Windows: `openacp install <pkg>` (identical to `openacp plugin add`) runs `execFileSync("npm", …)` and the onboarding wizard runs `execFileAsync("npm", …)`, neither with `shell: true`, so `npm.cmd` is never found and the ENOENT surfaces as the misleading `Failed to install … Check the package name and try again`. Run `node scripts\install-openacp-plugin.mjs` instead — it does both steps correctly and `start-openacp.ps1` runs it on every start. It deliberately skips the plugin's interactive `install` hook, which would rewrite `settings.json` and destroy the bot token and every channel binding. Verify with `openacp plugins`. |
 | ↳ 3. `ERR_UNSUPPORTED_ESM_URL_SCHEME` in the log (`Failed to load community plugin, skipping`) | A Windows bug in `@openacp/cli`: the community-plugin loader calls `await import(modulePath)` with an absolute path like `C:\…`, which Node's ESM loader rejects (`Received protocol 'c:'`). **No npm plugin can load on Windows** until this is patched. The same bundle already does it correctly elsewhere (`importFromDir` uses `import(pathToFileURL(entryPath).href)`), so the fix is to make the loader match. `scripts\patch-openacp-cli.mjs` does exactly that; `start-openacp.ps1` runs `--check` before every start and re-applies it when needed, because **every `openacp update` / CLI reinstall restores the broken bundle**. Run it by hand with `node scripts\patch-openacp-cli.mjs` (`--check`, `--revert`, `--cli <path>` also available), then restart OpenACP. Reported against 2026.518.2, which was `latest` at the time. |
 
 ## Repository layout
@@ -556,7 +576,8 @@ scripts/    bootstrap.ps1, setup.ps1, start-backend.ps1, start-frontend.ps1, sta
             install-agent-report.ps1, install-heartbeat-task.ps1, heartbeat.ps1,
             heartbeat-silent.vbs, cleanup-openacp-tunnels.ps1, diagnose-new-pc.ps1,
             make-distributable.ps1, patch-openacp-cli.mjs (Windows ESM fix for the
-            OpenACP CLI), lib.ps1 (helpers shared by the scripts above)
+            OpenACP CLI), install-openacp-plugin.mjs (Discord adapter as a workspace
+            plugin), lib.ps1 (helpers shared by the scripts above)
 agent-deck.bat             Launcher: start | stop | install (menu when double-clicked)
 start-agent-deck.bat       Double-click shortcut for "agent-deck.bat start"
 stop-agent-deck.bat        Double-click shortcut for "agent-deck.bat stop"
