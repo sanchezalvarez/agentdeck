@@ -466,12 +466,18 @@ one; step 6 is where the two paths differ.
 7. Configure the bot, by whichever path applies:
    - **Same bot:** dashboard → *Apply bundle to this PC* (the previous settings file, if any, is
      kept as `settings.json.pre-import.bak`), then restart OpenACP.
-   - **New bot:** run `openacp onboard` from `~\openacp-workspace` and give it the new bot token
-     and server. It writes `plugins\data\@openacp\discord-adapter\settings.json`, whose keys are
-     *all* environment-specific: `botToken`, `guildId`, `forumChannelId`, `notificationChannelId`,
+   - **New bot:** run `openacp onboard` from `~\openacp-workspace` and pick Discord; it asks for
+     the new bot token and server and writes
+     `plugins\data\@openacp\discord-adapter\settings.json`, whose keys are *all*
+     environment-specific: `botToken`, `guildId`, `forumChannelId`, `notificationChannelId`,
      `assistantThreadId` and `channelBindings`. Set the channel bindings afterwards from the
      dashboard's OpenACP page rather than by hand. (`OPENACP_DISCORD_BOT_TOKEN` and
-     `OPENACP_DISCORD_GUILD_ID` also seed those two keys, but only once the settings file exists.)
+     `OPENACP_DISCORD_GUILD_ID` seed the first two, but only once the settings file exists.)
+     **This only works because step 6 ran first.** The wizard skips its own (Windows-broken) npm
+     install when the adapter is already present, and `patch-openacp-cli.mjs` fixes the
+     `await import()` it would otherwise die on. Without both, onboarding silently registers
+     Discord as `enabled: false` / version `unknown` and never reaches the prompt for the bot
+     token — it looks like it worked and configures nothing.
 8. Make sure the bound workspace folders (e.g. `C:\unity\*`) exist on the new PC, or OpenACP drops
    those bindings.
 
