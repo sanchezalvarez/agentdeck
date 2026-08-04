@@ -1,4 +1,4 @@
-# Creates (or replaces) the "AgentDeck Heartbeat" scheduled task, which is
+﻿# Creates (or replaces) the "AgentDeck Heartbeat" scheduled task, which is
 # what makes this PC show up as an online worker in the dashboard. Nothing
 # else in this repo creates it — a fresh PC has no heartbeat at all until
 # this has been run once. Safe to re-run.

@@ -1,4 +1,4 @@
-# Read-only health check for a fresh-PC Agent Deck setup (see AGENTS.md "Moving to
+﻿# Read-only health check for a fresh-PC Agent Deck setup (see AGENTS.md "Moving to
 # another PC"). Walks every precondition in the same order the setup path depends on
 # them, so a broken chain shows exactly where it snaps instead of surfacing only as a
 # downstream 503 from /api/openacp/channel-bindings.

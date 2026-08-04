@@ -1,4 +1,4 @@
-# Kill leaked cloudflared tunnel processes spawned by the OpenACP CLI.
+﻿# Kill leaked cloudflared tunnel processes spawned by the OpenACP CLI.
 #
 # OpenACP starts its tunnel as a child cloudflared.exe from ~\.openacp\bin.
 # When the CLI is killed or restarted, that child is orphaned and keeps

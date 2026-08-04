@@ -1,4 +1,4 @@
-# Helpers shared by the Agent Deck scripts. Dot-source it at the top of a script:
+﻿# Helpers shared by the Agent Deck scripts. Dot-source it at the top of a script:
 #
 #     . (Join-Path $PSScriptRoot "lib.ps1")
 #

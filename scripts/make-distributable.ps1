@@ -1,4 +1,4 @@
-# Build a clean, shareable copy of Agent Deck — source only, none of this PC's
+﻿# Build a clean, shareable copy of Agent Deck — source only, none of this PC's
 # personal data. What is left out:
 #   * .env               (your config)
 #   * openacp-config/    (your Discord bot token bundle)

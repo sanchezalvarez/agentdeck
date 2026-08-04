@@ -1,4 +1,4 @@
-# Install the agent-report CLI so every agent can reach it.
+﻿# Install the agent-report CLI so every agent can reach it.
 #
 # The package deliberately goes into the backend venv rather than Python's
 # user-site (`pip install --user`, which this script used to do). Agent

@@ -1,4 +1,4 @@
-# Sends a worker heartbeat to the local Agent Deck.
+﻿# Sends a worker heartbeat to the local Agent Deck.
 # Runs from the "AgentDeck Heartbeat" scheduled task (see README). Posts directly
 # to the HTTP API — no Python interpreter startup on every run. Reads the write
 # token from the repository .env so it does not depend on the task's environment.

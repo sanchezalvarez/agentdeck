@@ -1,4 +1,4 @@
-# Stop the Agent Deck backend, the dashboard and the OpenACP daemon.
+﻿# Stop the Agent Deck backend, the dashboard and the OpenACP daemon.
 #
 # Closing the console windows does not always terminate the processes they
 # started, which leaves ports 3000/8765 occupied. This kills them properly.

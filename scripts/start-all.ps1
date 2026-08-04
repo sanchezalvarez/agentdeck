@@ -1,4 +1,4 @@
-# Start the Agent Deck backend, the dashboard and the OpenACP daemon.
+﻿# Start the Agent Deck backend, the dashboard and the OpenACP daemon.
 #
 # Anything already running is left untouched — re-running this script is safe
 # and will not produce "port already in use" errors.

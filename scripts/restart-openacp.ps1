@@ -1,4 +1,4 @@
-# Restart the OpenACP daemon.
+﻿# Restart the OpenACP daemon.
 #
 # Needed after changing channel bindings in the dashboard — the Discord adapter
 # reads its settings once at startup.

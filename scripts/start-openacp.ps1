@@ -1,4 +1,4 @@
-# Run the OpenACP server in the foreground, in this window.
+﻿# Run the OpenACP server in the foreground, in this window.
 #
 # Deliberately NOT a daemon: the log stays visible here, and closing this window
 # stops OpenACP together with every running agent session.

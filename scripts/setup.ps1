@@ -1,4 +1,4 @@
-# Agent Deck — one-time setup
+﻿# Agent Deck — one-time setup
 $ErrorActionPreference = "Stop"
 $root = Split-Path -Parent $PSScriptRoot
 

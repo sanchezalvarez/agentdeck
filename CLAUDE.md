@@ -116,6 +116,11 @@ it are resolved from `__file__`, so renaming the repo folder doesn't break them.
   component. Fonts are bundled via `@fontsource` because the dashboard must work offline.
 - **Windows line endings matter.** `.gitattributes` forces CRLF on `.bat`, `.cmd`, `.vbs` and
   `.ps1` — `cmd.exe` mis-parses `goto` labels in an LF-only batch file.
+- **`.ps1` files with non-ASCII characters must be saved UTF-8 *with* BOM.** Double-clicking a
+  script runs it under Windows PowerShell 5.1, which reads a BOM-less file as ANSI: an em dash
+  becomes `â€"`, whose last byte is `U+201D` — a curly quote PowerShell accepts as a string
+  delimiter. Strings then terminate early and the whole file fails to parse, so the window opens
+  and closes with nothing shown. pwsh 7 reads UTF-8 either way, which is why this hides.
 - **PowerShell scripts share `scripts/lib.ps1`**; `agent-deck.bat` owns the launcher dispatch and
   passes any trailing arguments straight through. `start-agent-deck.bat` / `stop-agent-deck.bat`
   are double-click shortcuts that `call` it — keep them free of logic.
