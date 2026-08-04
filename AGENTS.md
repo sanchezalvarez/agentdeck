@@ -415,6 +415,34 @@ Writes are guarded: the workspace directory must exist, channel IDs must be Disc
 the file is written atomically with a timestamped backup, and a revision check rejects the save
 if something else changed the file in the meantime.
 
+### Workspaces on a network drive
+
+UNC paths (`\\server\share\...`) are refused outright (`openacp_validation.is_unc_path`) — an
+unreachable host makes a directory probe block for tens of seconds. A **mapped drive letter**
+(`Z:\Projects\...`) is an ordinary path, so it is accepted, but it hits the same wall and adds
+two of its own. All three are handled, and the handling is worth knowing about:
+
+- **The probe is bounded, not the notation.** `workspace_exists()` runs `is_dir()` on an
+  abandoned daemon thread and calls the path missing after `STAT_TIMEOUT_SECONDS` (2s), so a
+  share that has gone away degrades the dashboard instead of hanging it.
+- **A missing workspace is re-checked, not remembered.** The adapter keeps one settings object
+  for its whole lifetime, so `loadChannelBindings` used to memoise "workspace path does not
+  exist" until OpenACP restarted. Rejections that can heal on their own are now marked
+  `transient` and expire after `TRANSIENT_RETRY_MS` (30s) — a drive that reconnects brings its
+  channel back by itself, and logs `Channel bindings loaded` when it does.
+- **Drives are woken before the server starts.** Windows restores a persistent mapping lazily:
+  right after a reboot `Z:\` resolves as missing until something touches it, which would
+  otherwise be the first Discord message. `start-openacp.ps1` reads the bound workspaces, keeps
+  the roots that `Win32_NetworkConnection` calls mappings (plus any UNC ones), and probes them in
+  a job with a 25s ceiling, reporting each as `[ok]` or `[warn]`.
+
+Two things remain the operator's job. **Never run Agent Deck or OpenACP elevated** — a UAC
+split token cannot see drives mapped by the unelevated session, so every binding on `Z:\` reads
+as broken. And map the drive persistently *for the user that runs Agent Deck*
+(`net use Z: \\server\share /persistent:yes`). If a binding's workspace and its project's
+`repository_path` are written differently (`Z:\x` vs `\\server\share\x`), `pair_with_projects`
+compares paths only and will not link them.
+
 ## System page — fresh-PC setup & screenshots
 
 The **System** page in the dashboard groups the "install a dependency from a button" helpers.

@@ -1,11 +1,12 @@
 import json
 import subprocess
+import time
 from pathlib import Path
 
 import pytest
 
 from app.config import get_settings
-from app.services import openacp_daemon, openacp_hook, openacp_install
+from app.services import openacp_daemon, openacp_hook, openacp_install, openacp_validation
 
 # Fabricated fixtures — shaped like Discord snowflakes/tokens, but not real IDs.
 BOT_TOKEN = "MTAwMDAwMDAwMDAwMDAwMDAw.GtEsT0.example-token-not-real"
@@ -365,6 +366,26 @@ def test_unc_workspace_rejected(client, auth, openacp_env):
         headers=auth,
     )
     assert response.status_code == 422
+
+
+def test_workspace_on_hung_share_reports_missing_instead_of_blocking(monkeypatch):
+    """A mapped network drive is an ordinary path, so the UNC guard never sees
+    it — the probe itself has to give up, or listing bindings stalls the API."""
+
+    def hang(_value):
+        time.sleep(30)
+        return True
+
+    monkeypatch.setattr(openacp_validation, "_is_dir", hang)
+
+    started = time.monotonic()
+    assert openacp_validation.workspace_exists("Z:\\Shared\\Project", timeout=0.2) is False
+    assert time.monotonic() - started < 5
+
+
+def test_workspace_probe_still_answers_for_a_real_directory(tmp_path):
+    assert openacp_validation.workspace_exists(str(tmp_path)) is True
+    assert openacp_validation.workspace_exists(str(tmp_path / "nope")) is False
 
 
 def test_duplicate_channel_id_rejected(client, auth, openacp_env):

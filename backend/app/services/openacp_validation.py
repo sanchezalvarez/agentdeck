@@ -7,10 +7,19 @@ change one, change the other.
 """
 
 import re
+import threading
 from pathlib import Path
 
 SNOWFLAKE_RE = r"\d{17,20}"
 _SNOWFLAKE = re.compile(rf"^{SNOWFLAKE_RE}$")
+
+# How long a single directory probe may take before the path counts as missing.
+# is_dir() against an unreachable SMB host blocks for the redirector's timeout —
+# tens of seconds — and this runs inside request handling, once per binding.
+# Refusing UNC paths (below) covers only half of that: a mapped drive letter
+# such as Z:\ is an ordinary path that hits exactly the same wall, so the probe
+# itself is bounded rather than the notation it is written in.
+STAT_TIMEOUT_SECONDS = 2.0
 
 
 def is_snowflake(value: str) -> bool:
@@ -23,13 +32,30 @@ def is_unc_path(value: str) -> bool:
     return value.startswith("\\\\") or value.startswith("//")
 
 
-def workspace_exists(value: str) -> bool:
-    if not value or is_unc_path(value):
-        return False
+def _is_dir(value: str) -> bool:
     try:
         return Path(value).is_dir()
     except OSError:
         return False
+
+
+def workspace_exists(value: str, timeout: float = STAT_TIMEOUT_SECONDS) -> bool:
+    """True when `value` is a directory that answers within `timeout`.
+
+    A path that does not answer in time is reported as missing: the question
+    being asked is "can an agent work here now", and a share that needs half a
+    minute to reply is no more usable than one that is gone.
+    """
+    if not value or is_unc_path(value):
+        return False
+
+    answer: list[bool] = []
+    # A thread parked in the SMB redirector cannot be interrupted, so it is
+    # abandoned rather than joined — daemon=True keeps it from holding up exit.
+    probe = threading.Thread(target=lambda: answer.append(_is_dir(value)), daemon=True)
+    probe.start()
+    probe.join(timeout)
+    return answer[0] if answer else False
 
 
 def validate_channel_id(value: str) -> str:

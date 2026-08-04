@@ -4,7 +4,9 @@ import {
   resolveBinding,
   loadChannelBindings,
   resetBindingCache,
+  TRANSIENT_RETRY_MS,
 } from '../bindings.js';
+import type { Logger } from '../types.js';
 
 const TEXT_CHANNEL = '111111111111111111';
 const FORUM_CHANNEL = '222222222222222222';
@@ -131,5 +133,74 @@ describe('loadChannelBindings', () => {
     // A new object (settings.json edited + reloaded) revalidates.
     loadChannelBindings({ ...raw }, opts);
     expect(calls).toBe(2);
+  });
+
+  it('keeps memoising indefinitely while nothing is transiently broken', () => {
+    let calls = 0;
+    const raw = {
+      [TEXT_CHANNEL]: { agent: 'claude', workspace: 'D:\\Real' },
+      // Structurally broken: no drive coming back can fix this one.
+      'not-a-snowflake': { agent: 'claude', workspace: 'D:\\Real' },
+    };
+    let clock = 0;
+    const opts = {
+      workspaceExists: () => {
+        calls += 1;
+        return true;
+      },
+      now: () => clock,
+    };
+
+    loadChannelBindings(raw, opts);
+    clock += TRANSIENT_RETRY_MS * 10;
+    loadChannelBindings(raw, opts);
+    expect(calls).toBe(1);
+  });
+
+  // A workspace on a mapped network drive reads as missing until Windows
+  // reconnects it. Memoising that verdict on object identity alone froze the
+  // binding until OpenACP was restarted.
+  it('re-validates a missing workspace once the retry window has passed', () => {
+    let connected = false;
+    let clock = 0;
+    const raw = { [TEXT_CHANNEL]: { agent: 'claude', workspace: 'Z:\\Projects\\Shared' } };
+    const opts = {
+      workspaceExists: () => connected,
+      now: () => clock,
+    };
+
+    expect(loadChannelBindings(raw, opts).bindings.size).toBe(0);
+
+    // The drive comes back, but the retry window has not elapsed yet.
+    connected = true;
+    clock += TRANSIENT_RETRY_MS - 1;
+    expect(loadChannelBindings(raw, opts).bindings.size).toBe(0);
+
+    clock += 1;
+    const recovered = loadChannelBindings(raw, opts);
+    expect(recovered.bindings.size).toBe(1);
+    expect(recovered.transient).toBe(false);
+    expect(recovered.bindings.get(TEXT_CHANNEL)?.workspace).toBe('Z:\\Projects\\Shared');
+  });
+
+  it('logs a repeated transient failure only once', () => {
+    const errors: string[] = [];
+    const logger: Logger = {
+      debug: () => {},
+      info: () => {},
+      warn: () => {},
+      error: (obj: object) => errors.push(JSON.stringify(obj)),
+    };
+    let clock = 0;
+    const raw = { [TEXT_CHANNEL]: { agent: 'claude', workspace: 'Z:\\Gone' } };
+    const opts = { workspaceExists: () => false, now: () => clock };
+
+    loadChannelBindings(raw, opts, logger);
+    clock += TRANSIENT_RETRY_MS;
+    loadChannelBindings(raw, opts, logger);
+    clock += TRANSIENT_RETRY_MS;
+    loadChannelBindings(raw, opts, logger);
+
+    expect(errors).toHaveLength(1);
   });
 });

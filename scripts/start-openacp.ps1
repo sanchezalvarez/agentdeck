@@ -126,6 +126,75 @@ if (-not (Get-Command node -ErrorAction SilentlyContinue)) {
 # Tunnels leaked by previous runs would pile up next to the one this run spawns.
 & (Join-Path $PSScriptRoot "cleanup-openacp-tunnels.ps1")
 
+# --- Reconnect network workspaces ------------------------------------------
+# Windows restores a persistent drive mapping lazily: after a reboot Z:\ is a
+# known mapping but resolves as missing until something first touches it. The
+# adapter stats every bound workspace when a Discord message arrives, so an
+# untouched drive makes that binding read as broken. Touch the drives here,
+# while nobody is waiting for an answer in Discord.
+$settingsFile = Join-Path $workspace ".openacp\plugins\data\@openacp\discord-adapter\settings.json"
+
+if (-not (Test-Path $settingsFile)) {
+    Write-Host "[skip]  no Discord adapter settings yet - no workspaces to reconnect" -ForegroundColor DarkGray
+} else {
+    $roots = @()
+    try {
+        # settings.json also holds the Discord bot token: read it for the
+        # workspace paths only, and never put file content into a message.
+        $bindings = (Get-Content $settingsFile -Raw | ConvertFrom-Json).channelBindings
+        if ($bindings) {
+            $roots = @(
+                $bindings.PSObject.Properties.Value |
+                    ForEach-Object { $_.workspace } |
+                    Where-Object { $_ } |
+                    ForEach-Object { [System.IO.Path]::GetPathRoot($_) } |
+                    Where-Object { $_ } |
+                    Select-Object -Unique
+            )
+        }
+    } catch {
+        Write-Host "[warn]  channel bindings unreadable - network workspaces not reconnected" -ForegroundColor Yellow
+    }
+
+    # Win32_NetworkConnection lists persistent mappings even while they are
+    # disconnected, which is exactly the state this step exists to fix.
+    $mapped = @()
+    try {
+        $mapped = @(Get-CimInstance Win32_NetworkConnection -ErrorAction Stop |
+            ForEach-Object { $_.LocalName } | Where-Object { $_ })
+    } catch { }
+
+    $remote = @($roots | Where-Object { $_.StartsWith("\\") -or ($mapped -contains $_.TrimEnd("\")) })
+
+    if ($remote.Count -eq 0) {
+        Write-Host "[ok]    no network workspaces in channel bindings" -ForegroundColor DarkGray
+    } else {
+        # Test-Path against an unreachable share blocks for the SMB redirector's
+        # timeout, so the probe runs where start-up can walk away from it. The
+        # job shares this logon session, so the reconnect it triggers is the one
+        # OpenACP will see.
+        $probe = Start-Job -ScriptBlock {
+            param($paths)
+            foreach ($p in $paths) { [pscustomobject]@{ Path = $p; Ok = (Test-Path -LiteralPath $p) } }
+        } -ArgumentList (, $remote)
+
+        if (Wait-Job $probe -Timeout 25) {
+            foreach ($result in (Receive-Job $probe)) {
+                if ($result.Ok) {
+                    Write-Host "[ok]    network workspace reachable: $($result.Path)" -ForegroundColor DarkGray
+                } else {
+                    Write-Host "[warn]  network workspace unreachable: $($result.Path)" -ForegroundColor Yellow
+                    Write-Host "        bindings under it are ignored until it comes back (retried every 30s)"
+                }
+            }
+        } else {
+            Write-Host "[warn]  network workspaces did not answer in 25s - starting anyway" -ForegroundColor Yellow
+            Stop-Job $probe
+        }
+        Remove-Job $probe -Force
+    }
+}
+
 Set-Location $workspace
 # "--foreground" is the only way to keep the server in this window: plain
 # "openacp start" always daemonizes, whatever runMode says in the config.

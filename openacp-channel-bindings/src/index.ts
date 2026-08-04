@@ -3,8 +3,10 @@ export {
   resolveBinding,
   loadChannelBindings,
   resetBindingCache,
+  TRANSIENT_RETRY_MS,
   type ValidatedBindings,
   type ValidationIssue,
+  type LoadOptions,
   type Resolution,
 } from './bindings.js';
 
